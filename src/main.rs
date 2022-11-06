@@ -1,6 +1,6 @@
 use crossterm::{
     cursor,
-    event::{self, Event, KeyCode},
+    event::{self, Event, KeyCode, KeyModifiers},
     execute,
     style::{self, Stylize},
     terminal, QueueableCommand, Result,
@@ -32,7 +32,7 @@ fn main() -> Result<()> {
 
     while let Ok(event) = event::read() {
         if let Event::Key(event) = event {
-            if event.code == KeyCode::Char('c') {
+            if event.modifiers == KeyModifiers::CONTROL && event.code == KeyCode::Char('c') {
                 break;
             }
 
