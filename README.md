@@ -26,3 +26,5 @@ Controls:
 * `l`: Look right
 * `u`: Roll left
 * `o`: Roll right
+
+Note that all controls are relative to the camera's current orientation.
