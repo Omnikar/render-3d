@@ -5,18 +5,19 @@ use crossterm::{
     style::{self, Color, Stylize},
     terminal, QueueableCommand, Result,
 };
+use serde::Deserialize;
 use std::io::{stdout, Write};
 
-const DIMS: (u16, u16) = (50, 50);
+const DIMS: (u16, u16) = (150, 100);
 
 fn main() -> Result<()> {
-    let world = World::default();
+    let world = ron::from_str::<World>(include_str!("../scenes/board.ron")).unwrap();
     let mut camera = Camera {
         transform: Transform {
             position: -0.8 * Vec3::i(),
             rotation: Quat::one(),
         },
-        px_per_unit: 20.0,
+        px_per_unit: 40.0,
         focal_length: 2.0,
     };
 
@@ -49,11 +50,11 @@ fn main() -> Result<()> {
                 KeyCode::Char('r') => camera.focal_length += 0.1,
                 KeyCode::Char('f') => camera.focal_length -= 0.1,
                 KeyCode::Char('x') => {
-                    camera.transform.position.x += 0.1;
+                    movement(0.1 * Vec3::i());
                     camera.focal_length -= 0.1;
                 }
                 KeyCode::Char('z') => {
-                    camera.transform.position.x -= 0.1;
+                    movement(-0.1 * Vec3::i());
                     camera.focal_length += 0.1;
                 }
                 _ => (),
@@ -61,7 +62,7 @@ fn main() -> Result<()> {
 
             let mut rotation = |angle: f32, axis: Vec3| {
                 let hf_angle = angle / 2.0;
-                let new_rot = Quat::from(hf_angle.cos()) + Quat::from(axis) * hf_angle.sin();
+                let new_rot = hf_angle.cos() + axis * hf_angle.sin();
 
                 let rot = &mut camera.transform.rotation;
                 let new_rot = *rot * new_rot * rot.conj();
@@ -108,7 +109,7 @@ fn queue_render(mut stdout: impl Write, world: &World, camera: &Camera) -> Resul
     Ok(())
 }
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug, Deserialize)]
 struct Vec3 {
     x: f32,
     y: f32,
@@ -133,6 +134,20 @@ impl std::ops::Add for Vec3 {
             y: self.y + rhs.y,
             z: self.z + rhs.z,
         }
+    }
+}
+
+impl std::ops::Add<f32> for Vec3 {
+    type Output = Quat;
+    fn add(self, rhs: f32) -> Quat {
+        Quat::from(self) + rhs
+    }
+}
+
+impl std::ops::Add<Vec3> for f32 {
+    type Output = Quat;
+    fn add(self, rhs: Vec3) -> Quat {
+        rhs + self
     }
 }
 
@@ -178,6 +193,13 @@ impl std::ops::Mul<f32> for Vec3 {
     }
 }
 
+impl std::ops::Mul<Quat> for Vec3 {
+    type Output = Quat;
+    fn mul(self, rhs: Quat) -> Quat {
+        Quat::from(self) * rhs
+    }
+}
+
 impl std::ops::Div<f32> for Vec3 {
     type Output = Vec3;
     fn div(self, rhs: f32) -> Vec3 {
@@ -185,6 +207,16 @@ impl std::ops::Div<f32> for Vec3 {
             x: self.x / rhs,
             y: self.y / rhs,
             z: self.z / rhs,
+        }
+    }
+}
+
+impl From<Quat> for Vec3 {
+    fn from(quat: Quat) -> Vec3 {
+        Vec3 {
+            x: quat.i,
+            y: quat.j,
+            z: quat.k,
         }
     }
 }
@@ -224,17 +256,15 @@ impl Vec3 {
     }
 
     fn rotate(self, rot: Quat) -> Vec3 {
-        Vec3::from(rot * Quat::from(self) * rot.conj())
+        Vec3::from(rot * self * rot.conj())
     }
-}
 
-impl From<Quat> for Vec3 {
-    fn from(quat: Quat) -> Vec3 {
-        Vec3 {
-            x: quat.i,
-            y: quat.j,
-            z: quat.k,
-        }
+    fn dot(self, rhs: Vec3) -> f32 {
+        self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
+    }
+
+    fn cross(self, rhs: Vec3) -> Vec3 {
+        Vec3::from(self * Quat::from(rhs))
     }
 }
 
@@ -266,6 +296,20 @@ impl std::ops::Add for Quat {
             j: self.j + rhs.j,
             k: self.k + rhs.k,
         }
+    }
+}
+
+impl std::ops::Add<f32> for Quat {
+    type Output = Quat;
+    fn add(self, rhs: f32) -> Quat {
+        self + Quat::from(rhs)
+    }
+}
+
+impl std::ops::Add<Quat> for f32 {
+    type Output = Quat;
+    fn add(self, rhs: Quat) -> Quat {
+        rhs + self
     }
 }
 
@@ -309,6 +353,13 @@ impl std::ops::Mul<f32> for Quat {
             j: self.j * rhs,
             k: self.k * rhs,
         }
+    }
+}
+
+impl std::ops::Mul<Vec3> for Quat {
+    type Output = Quat;
+    fn mul(self, rhs: Vec3) -> Quat {
+        self * Quat::from(rhs)
     }
 }
 
@@ -384,157 +435,72 @@ struct Camera {
 
 impl Camera {
     fn get_px(&self, world: &World, x: f32, y: f32) -> Color {
-        let step_size = 0.1f32;
-        let max_length = 10.0f32;
-        let max_steps = (max_length / step_size).ceil() as usize;
-
-        let step = (Vec3 {
+        let ray = Vec3 {
             x: self.focal_length,
             y: -x / self.px_per_unit,
             z: -y / self.px_per_unit,
         }
-        .normalize()
-            * step_size)
-            .rotate(self.transform.rotation);
+        .rotate(self.transform.rotation);
 
-        let mut current = self.transform.position;
-        for _ in 0..max_steps {
-            current += step;
-            if let Some((.., color)) = world.cuboids.iter().find(|(c1, c2, _)| {
-                ((current.x - c1.x).is_sign_positive() ^ (current.x - c2.x).is_sign_positive())
-                    && ((current.y - c1.y).is_sign_positive()
-                        ^ (current.y - c2.y).is_sign_positive())
-                    && ((current.z - c1.z).is_sign_positive()
-                        ^ (current.z - c2.z).is_sign_positive())
-            }) {
-                return *color;
-            } else if let Some((.., color)) = world.spheres.iter().find(|(pos, r, _)| {
-                ((pos.x - current.x).abs() <= *r
-                    && (pos.y - current.y).abs() <= *r
-                    && (pos.z - current.z).abs() <= *r)
-                    .then(|| (current - *pos).sq_mag() <= r.powi(2))
-                    .unwrap_or_default()
-            }) {
-                return *color;
+        let tris = world.tris.iter().filter_map(|(p1, p2, p3, color)| {
+            let pos = self.transform.position;
+            // Check if within plane
+            let v1 = *p2 - *p1;
+            let v2 = *p3 - *p1;
+            let dist = pos - *p1;
+            let cross = v1.cross(v2);
+            let t = -cross.dot(dist) / cross.dot(ray);
+
+            if !t.is_finite() {
+                return None;
             }
-        }
 
-        Color::Black
+            // Check if within triangular prism
+            let [(a, d, g), (b, e, h), (c, f, i)] =
+                [p1, p2, p3].map(|p| *p - pos).map(|v| (v.x, v.y, v.z));
+
+            let det_neg = (a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g))
+                .is_sign_negative();
+            if ![
+                ray.x * (e * i - f * h) + ray.y * (c * h - b * i) + ray.z * (b * f - c * e),
+                ray.x * (f * g - d * i) + ray.y * (a * i - c * g) + ray.z * (c * d - a * f),
+                ray.x * (d * h - e * g) + ray.y * (b * g - a * h) + ray.z * (a * e - b * d),
+            ]
+            .iter()
+            .all(|n| n.is_sign_positive() ^ det_neg)
+            {
+                return None;
+            }
+
+            Some((*color, t)).filter(|_| t.is_sign_positive())
+        });
+        let spheres = world.spheres.iter().filter_map(|(c, r, color)| {
+            let dist = *c - self.transform.position;
+            let a = ray.sq_mag();
+            let b = ray.dot(dist);
+            let c = dist.sq_mag() - r.powi(2);
+
+            let sqrt_term = (b.powi(2) - a * c).sqrt();
+            if !sqrt_term.is_finite() {
+                return None;
+            }
+
+            Some(*color).zip(
+                [(b + sqrt_term) / a, (b - sqrt_term) / a]
+                    .into_iter()
+                    .filter(|n| n.is_sign_positive())
+                    .min_by(f32::total_cmp),
+            )
+        });
+        tris.chain(spheres)
+            .min_by(|(_, a), (_, b)| a.total_cmp(b))
+            .map(|(color, _)| color)
+            .unwrap_or(Color::Black)
     }
 }
 
+#[derive(Default, Deserialize)]
 struct World {
     spheres: Vec<(Vec3, f32, Color)>,
-    cuboids: Vec<(Vec3, Vec3, Color)>,
-}
-
-impl Default for World {
-    fn default() -> Self {
-        let spheres = vec![
-            (
-                Vec3 {
-                    x: 7.0,
-                    y: 0.0,
-                    z: 4.0,
-                },
-                1.0,
-                Color::Red,
-            ),
-            (
-                Vec3 {
-                    x: 7.0,
-                    y: 0.0,
-                    z: -4.0,
-                },
-                1.0,
-                Color::Red,
-            ),
-            (
-                Vec3 {
-                    x: 1.0,
-                    y: -0.5,
-                    z: 0.0,
-                },
-                0.2,
-                Color::Blue,
-            ),
-            (
-                Vec3 {
-                    x: 1.0,
-                    y: 0.5,
-                    z: 0.0,
-                },
-                0.2,
-                Color::Yellow,
-            ),
-            (
-                Vec3 {
-                    x: 2.0,
-                    y: -0.5,
-                    z: 0.0,
-                },
-                0.2,
-                Color::Yellow,
-            ),
-            (
-                Vec3 {
-                    x: 2.0,
-                    y: 0.5,
-                    z: 0.0,
-                },
-                0.2,
-                Color::Blue,
-            ),
-            (
-                Vec3 {
-                    x: 3.0,
-                    y: -0.5,
-                    z: 0.0,
-                },
-                0.2,
-                Color::Blue,
-            ),
-            (
-                Vec3 {
-                    x: 3.0,
-                    y: 0.5,
-                    z: 0.0,
-                },
-                0.2,
-                Color::Yellow,
-            ),
-            (
-                Vec3 {
-                    x: 4.5,
-                    y: -0.7,
-                    z: 0.0,
-                },
-                0.4,
-                Color::Green,
-            ),
-            (
-                Vec3 {
-                    x: 4.5,
-                    y: 0.7,
-                    z: 0.0,
-                },
-                0.4,
-                Color::Green,
-            ),
-        ];
-        let cuboids = vec![(
-            Vec3 {
-                x: 1.0,
-                y: -1.0,
-                z: -0.1,
-            },
-            Vec3 {
-                x: 1.2,
-                y: -1.2,
-                z: 0.1,
-            },
-            Color::Magenta,
-        )];
-        Self { spheres, cuboids }
-    }
+    tris: Vec<(Vec3, Vec3, Vec3, Color)>,
 }

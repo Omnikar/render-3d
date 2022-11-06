@@ -6,4 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-crossterm = "0.25.0"
+crossterm = { version = "0.25.0", features = ["serde"] }
+ron = "0.8.0"
+serde = { version = "1.0.147", features = ["derive"] }
