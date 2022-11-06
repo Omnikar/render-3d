@@ -11,7 +11,7 @@ use std::io::{stdout, Write};
 const DIMS: (u16, u16) = (150, 100);
 
 fn main() -> Result<()> {
-    let world = ron::from_str::<World>(include_str!("../scenes/board.ron")).unwrap();
+    let world = ron::from_str::<World>(include_str!("../scenes/sample.ron")).unwrap();
     let mut camera = Camera {
         transform: Transform {
             position: -0.8 * Vec3::i(),
@@ -442,60 +442,71 @@ impl Camera {
         }
         .rotate(self.transform.rotation);
 
-        let tris = world.tris.iter().filter_map(|(p1, p2, p3, color)| {
-            let pos = self.transform.position;
-            // Check if within plane
-            let v1 = *p2 - *p1;
-            let v2 = *p3 - *p1;
-            let dist = pos - *p1;
-            let cross = v1.cross(v2);
-            let t = -cross.dot(dist) / cross.dot(ray);
-
-            if !t.is_finite() {
-                return None;
-            }
-
-            // Check if within triangular prism
-            let [(a, d, g), (b, e, h), (c, f, i)] =
-                [p1, p2, p3].map(|p| *p - pos).map(|v| (v.x, v.y, v.z));
-
-            let det_neg = (a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g))
-                .is_sign_negative();
-            if ![
-                ray.x * (e * i - f * h) + ray.y * (c * h - b * i) + ray.z * (b * f - c * e),
-                ray.x * (f * g - d * i) + ray.y * (a * i - c * g) + ray.z * (c * d - a * f),
-                ray.x * (d * h - e * g) + ray.y * (b * g - a * h) + ray.z * (a * e - b * d),
-            ]
+        let tris = world.tris.iter().filter_map(|p| self.tri_raycast(ray, *p));
+        let spheres = world
+            .spheres
             .iter()
-            .all(|n| n.is_sign_positive() ^ det_neg)
-            {
-                return None;
-            }
-
-            Some((*color, t)).filter(|_| t.is_sign_positive())
-        });
-        let spheres = world.spheres.iter().filter_map(|(c, r, color)| {
-            let dist = *c - self.transform.position;
-            let a = ray.sq_mag();
-            let b = ray.dot(dist);
-            let c = dist.sq_mag() - r.powi(2);
-
-            let sqrt_term = (b.powi(2) - a * c).sqrt();
-            if !sqrt_term.is_finite() {
-                return None;
-            }
-
-            Some(*color).zip(
-                [(b + sqrt_term) / a, (b - sqrt_term) / a]
-                    .into_iter()
-                    .filter(|n| n.is_sign_positive())
-                    .min_by(f32::total_cmp),
-            )
-        });
+            .filter_map(|p| self.sphere_raycast(ray, *p));
         tris.chain(spheres)
             .min_by(|(_, a), (_, b)| a.total_cmp(b))
             .map(|(color, _)| color)
             .unwrap_or(Color::Black)
+    }
+
+    fn tri_raycast(
+        &self,
+        ray: Vec3,
+        (p1, p2, p3, color): (Vec3, Vec3, Vec3, Color),
+    ) -> Option<(Color, f32)> {
+        let pos = self.transform.position;
+        // Check if within plane
+        let v1 = p2 - p1;
+        let v2 = p3 - p1;
+        let dist = pos - p1;
+        let cross = v1.cross(v2);
+        let t = -cross.dot(dist) / cross.dot(ray);
+
+        if !t.is_finite() {
+            return None;
+        }
+
+        // Check if within triangular prism
+        let [(a, d, g), (b, e, h), (c, f, i)] =
+            [p1, p2, p3].map(|p| p - pos).map(|v| (v.x, v.y, v.z));
+
+        let det_neg =
+            (a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g)).is_sign_negative();
+        if ![
+            ray.x * (e * i - f * h) + ray.y * (c * h - b * i) + ray.z * (b * f - c * e),
+            ray.x * (f * g - d * i) + ray.y * (a * i - c * g) + ray.z * (c * d - a * f),
+            ray.x * (d * h - e * g) + ray.y * (b * g - a * h) + ray.z * (a * e - b * d),
+        ]
+        .iter()
+        .all(|n| n.is_sign_positive() ^ det_neg)
+        {
+            return None;
+        }
+
+        Some((color, t)).filter(|_| t.is_sign_positive())
+    }
+
+    fn sphere_raycast(&self, ray: Vec3, (c, r, color): (Vec3, f32, Color)) -> Option<(Color, f32)> {
+        let dist = c - self.transform.position;
+        let a = ray.sq_mag();
+        let b = ray.dot(dist);
+        let c = dist.sq_mag() - r.powi(2);
+
+        let sqrt_term = (b.powi(2) - a * c).sqrt();
+        if !sqrt_term.is_finite() {
+            return None;
+        }
+
+        Some(color).zip(
+            [(b + sqrt_term) / a, (b - sqrt_term) / a]
+                .into_iter()
+                .filter(|n| n.is_sign_positive())
+                .min_by(f32::total_cmp),
+        )
     }
 }
 
