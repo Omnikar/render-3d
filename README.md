@@ -28,5 +28,9 @@ Controls:
 * `l`: Look right
 * `u`: Roll left
 * `o`: Roll right
+* `r`: Increase focal length
+* `f`: Decrease focal length
+* `z`: Dolly zoom in
+* `x`: Dolly zoom out
 
 Note that all controls are relative to the camera's current orientation.
