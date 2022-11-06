@@ -2,13 +2,13 @@ use crossterm::{
     cursor,
     event::{self, Event, KeyCode},
     execute,
-    style::{self, Color, Stylize},
+    style::{self, Stylize},
     terminal, QueueableCommand, Result,
 };
 use serde::Deserialize;
 use std::io::{stdout, Write};
 
-const DIMS: (u16, u16) = (150, 100);
+const DIMS: (u16, u16) = (225, 150);
 
 fn main() -> Result<()> {
     let world = ron::from_str::<World>(include_str!("../scenes/sample.ron")).unwrap();
@@ -17,7 +17,7 @@ fn main() -> Result<()> {
             position: -0.8 * Vec3::i(),
             rotation: Quat::one(),
         },
-        px_per_unit: 40.0,
+        px_per_unit: 60.0,
         focal_length: 2.0,
     };
 
@@ -102,8 +102,8 @@ fn queue_render(mut stdout: impl Write, world: &World, camera: &Camera) -> Resul
             .queue(cursor::MoveTo(x, y_hf))?
             .queue(style::PrintStyledContent(
                 "▀"
-                    .with(camera.get_px(world, x_fl, y_hf_fl * 2.0))
-                    .on(camera.get_px(world, x_fl, y_hf_fl * 2.0 + 1.0)),
+                    .with(camera.get_px(world, x_fl, y_hf_fl * 2.0).into())
+                    .on(camera.get_px(world, x_fl, y_hf_fl * 2.0 + 1.0).into()),
             ))?;
     }
     Ok(())
@@ -422,6 +422,47 @@ impl Quat {
     }
 }
 
+#[derive(Clone, Copy, Deserialize)]
+struct Color([u8; 3]);
+
+impl std::ops::Index<usize> for Color {
+    type Output = u8;
+    fn index(&self, index: usize) -> &u8 {
+        &self.0[index]
+    }
+}
+
+impl std::ops::IndexMut<usize> for Color {
+    fn index_mut(&mut self, index: usize) -> &mut u8 {
+        &mut self.0[index]
+    }
+}
+
+impl From<Color> for style::Color {
+    fn from(color: Color) -> Self {
+        style::Color::Rgb {
+            r: color[0],
+            g: color[1],
+            b: color[2],
+        }
+    }
+}
+
+impl std::ops::Mul<f32> for Color {
+    type Output = Color;
+    fn mul(self, rhs: f32) -> Color {
+        Color(self.0.map(|n| (n as f32 * rhs).round() as u8))
+    }
+}
+
+impl Color {
+    fn interpolate(self, rhs: Color, ratio: f32) -> Color {
+        Color([0, 1, 2].map(|i| {
+            (self[i] as f32 * (1.0 - ratio)).round() as u8 + (rhs[i] as f32 * ratio).round() as u8
+        }))
+    }
+}
+
 struct Transform {
     position: Vec3,
     rotation: Quat,
@@ -442,20 +483,24 @@ impl Camera {
         }
         .rotate(self.transform.rotation);
 
-        let tris = world.tris.iter().filter_map(|p| self.tri_raycast(ray, *p));
+        let tris = world
+            .tris
+            .iter()
+            .filter_map(|p| self.tri_raycast(ray, world.light, *p));
         let spheres = world
             .spheres
             .iter()
-            .filter_map(|p| self.sphere_raycast(ray, *p));
+            .filter_map(|p| self.sphere_raycast(ray, world.light, *p));
         tris.chain(spheres)
             .min_by(|(_, a), (_, b)| a.total_cmp(b))
             .map(|(color, _)| color)
-            .unwrap_or(Color::Black)
+            .unwrap_or(Color([0; 3]))
     }
 
     fn tri_raycast(
         &self,
         ray: Vec3,
+        light: Vec3,
         (p1, p2, p3, color): (Vec3, Vec3, Vec3, Color),
     ) -> Option<(Color, f32)> {
         let pos = self.transform.position;
@@ -466,7 +511,7 @@ impl Camera {
         let cross = v1.cross(v2);
         let t = -cross.dot(dist) / cross.dot(ray);
 
-        if !t.is_finite() {
+        if !t.is_finite() || !t.is_sign_positive() {
             return None;
         }
 
@@ -487,11 +532,22 @@ impl Camera {
             return None;
         }
 
-        Some((color, t)).filter(|_| t.is_sign_positive())
+        let coord = self.transform.position + ray * t;
+        let normal = v1.cross(v2).normalize();
+        let light_vec = (light - coord).normalize();
+        let illumination = light_vec.dot(normal).max(0.0);
+        let color = color * illumination;
+
+        Some((color, t))
     }
 
-    fn sphere_raycast(&self, ray: Vec3, (c, r, color): (Vec3, f32, Color)) -> Option<(Color, f32)> {
-        let dist = c - self.transform.position;
+    fn sphere_raycast(
+        &self,
+        ray: Vec3,
+        light: Vec3,
+        (center, r, color): (Vec3, f32, Color),
+    ) -> Option<(Color, f32)> {
+        let dist = center - self.transform.position;
         let a = ray.sq_mag();
         let b = ray.dot(dist);
         let c = dist.sq_mag() - r.powi(2);
@@ -501,12 +557,16 @@ impl Camera {
             return None;
         }
 
-        Some(color).zip(
-            [(b + sqrt_term) / a, (b - sqrt_term) / a]
-                .into_iter()
-                .filter(|n| n.is_sign_positive())
-                .min_by(f32::total_cmp),
-        )
+        let t = [(b + sqrt_term) / a, (b - sqrt_term) / a]
+            .into_iter()
+            .filter(|n| n.is_sign_positive())
+            .min_by(f32::total_cmp)?;
+        let coord = self.transform.position + ray * t;
+        let normal = (coord - center).normalize();
+        let light_vec = (light - coord).normalize();
+        let illumination = light_vec.dot(normal).max(0.0);
+        let color = color * illumination;
+        Some((color, t))
     }
 }
 
@@ -514,4 +574,5 @@ impl Camera {
 struct World {
     spheres: Vec<(Vec3, f32, Color)>,
     tris: Vec<(Vec3, Vec3, Vec3, Color)>,
+    light: Vec3,
 }
