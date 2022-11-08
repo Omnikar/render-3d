@@ -125,9 +125,6 @@ fn queue_render(mut stdout: impl Write, world: &World, camera: &Camera) -> Resul
         .map(|(_, _, x_fl, y_hf_fl)| camera.get_double_px(world, x_fl, y_hf_fl * 2.0))
         .collect::<Vec<(Color, Color)>>();
 
-    // If these aren't equal, you're in for a bad time.
-    assert_eq!(colors.len(), *DATA_LEN);
-
     for (i, (y_hf, x, _, _)) in DATA.iter().enumerate() {
         stdout
             .queue(cursor::MoveTo(*x, *y_hf))?
