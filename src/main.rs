@@ -1,3 +1,10 @@
+// Requires nightly, allows for constant implementations of traits, for Self::Default for storage and small perf improvements.
+#![feature(const_trait_impl)]
+
+// TODO: replace with `anyhow` crate
+#[macro_use]
+extern crate lazy_static;
+
 use crossterm::{
     cursor,
     event::{self, Event, KeyCode, KeyModifiers},
@@ -5,10 +12,11 @@ use crossterm::{
     style::{self, Stylize},
     terminal, QueueableCommand, Result,
 };
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use serde::Deserialize;
 use std::io::{stdout, Write};
 
-const DIMS: (u16, u16) = (225, 150);
+const DIMS: (u16, u16) = (500, 250);
 
 fn main() -> Result<()> {
     let world = ron::from_str::<World>(include_str!("../scenes/sample.ron")).unwrap();
@@ -17,7 +25,7 @@ fn main() -> Result<()> {
             position: -0.8 * Vec3::i(),
             rotation: Quat::one(),
         },
-        px_per_unit: 60.0,
+        px_per_unit: 40.0,
         focal_length: 2.0,
     };
 
@@ -94,16 +102,37 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+lazy_static! {
+    pub static ref DATA: Vec<(u16, u16, f32, f32)> = {
+        let a = (DIMS.0 as f32) / 2.0;
+        let b = (DIMS.1 as f32) / 4.0;
+        (0..DIMS.1 / 2)
+            .flat_map(|y_hf| std::iter::repeat(y_hf).zip(0..DIMS.0))
+            .map(|(y_hf, x)| {
+                let x_fl = x as f32 - a;
+                let y_hf_fl = y_hf as f32 - b;
+                (y_hf, x, x_fl, y_hf_fl)
+            })
+            .collect::<Vec<(u16, u16, f32, f32)>>()
+    };
+    pub static ref DATA_LEN: usize = DATA.len();
+}
+
 fn queue_render(mut stdout: impl Write, world: &World, camera: &Camera) -> Result<()> {
-    for (y_hf, x) in (0..DIMS.1 / 2).flat_map(|y_hf| std::iter::repeat(y_hf).zip(0..DIMS.0)) {
-        let x_fl = x as f32 - (DIMS.0 as f32) / 2.0;
-        let y_hf_fl = y_hf as f32 - (DIMS.1 as f32) / 4.0;
+    let colors: Vec<(Color, Color)> = DATA
+        .clone()
+        .into_par_iter()
+        .map(|(_, _, x_fl, y_hf_fl)| camera.get_double_px(world, x_fl, y_hf_fl * 2.0))
+        .collect::<Vec<(Color, Color)>>();
+
+    // If these aren't equal, you're in for a bad time.
+    assert_eq!(colors.len(), *DATA_LEN);
+
+    for (i, (y_hf, x, _, _)) in DATA.iter().enumerate() {
         stdout
-            .queue(cursor::MoveTo(x, y_hf))?
+            .queue(cursor::MoveTo(*x, *y_hf))?
             .queue(style::PrintStyledContent(
-                "▀"
-                    .with(camera.get_px(world, x_fl, y_hf_fl * 2.0).into())
-                    .on(camera.get_px(world, x_fl, y_hf_fl * 2.0 + 1.0).into()),
+                "▀".with(colors[i].0.into()).on(colors[i].1.into()),
             ))?;
     }
     Ok(())
@@ -116,7 +145,7 @@ struct Vec3 {
     z: f32,
 }
 
-impl Default for Vec3 {
+impl const Default for Vec3 {
     fn default() -> Vec3 {
         Vec3 {
             x: 0.0,
@@ -128,6 +157,7 @@ impl Default for Vec3 {
 
 impl std::ops::Add for Vec3 {
     type Output = Vec3;
+    #[inline(always)]
     fn add(self, rhs: Vec3) -> Vec3 {
         Vec3 {
             x: self.x + rhs.x,
@@ -139,6 +169,7 @@ impl std::ops::Add for Vec3 {
 
 impl std::ops::Add<f32> for Vec3 {
     type Output = Quat;
+    #[inline(always)]
     fn add(self, rhs: f32) -> Quat {
         Quat::from(self) + rhs
     }
@@ -146,6 +177,7 @@ impl std::ops::Add<f32> for Vec3 {
 
 impl std::ops::Add<Vec3> for f32 {
     type Output = Quat;
+    #[inline(always)]
     fn add(self, rhs: Vec3) -> Quat {
         rhs + self
     }
@@ -159,6 +191,7 @@ impl std::ops::AddAssign for Vec3 {
 
 impl std::ops::Sub for Vec3 {
     type Output = Vec3;
+    #[inline(always)]
     fn sub(self, rhs: Vec3) -> Vec3 {
         Vec3 {
             x: self.x - rhs.x,
@@ -170,13 +203,19 @@ impl std::ops::Sub for Vec3 {
 
 impl std::ops::Neg for Vec3 {
     type Output = Vec3;
+    #[inline(always)]
     fn neg(self) -> Vec3 {
-        Vec3::default() - self
+        Vec3 {
+            x: -self.x,
+            y: -self.y,
+            z: -self.z,
+        }
     }
 }
 
 impl std::ops::Mul<Vec3> for f32 {
     type Output = Vec3;
+    #[inline(always)]
     fn mul(self, rhs: Vec3) -> Vec3 {
         Vec3 {
             x: self * rhs.x,
@@ -188,6 +227,7 @@ impl std::ops::Mul<Vec3> for f32 {
 
 impl std::ops::Mul<f32> for Vec3 {
     type Output = Vec3;
+    #[inline(always)]
     fn mul(self, rhs: f32) -> Vec3 {
         rhs * self
     }
@@ -195,6 +235,7 @@ impl std::ops::Mul<f32> for Vec3 {
 
 impl std::ops::Mul<Quat> for Vec3 {
     type Output = Quat;
+    #[inline(always)]
     fn mul(self, rhs: Quat) -> Quat {
         Quat::from(self) * rhs
     }
@@ -202,6 +243,7 @@ impl std::ops::Mul<Quat> for Vec3 {
 
 impl std::ops::Div<f32> for Vec3 {
     type Output = Vec3;
+    #[inline(always)]
     fn div(self, rhs: f32) -> Vec3 {
         Vec3 {
             x: self.x / rhs,
@@ -211,7 +253,8 @@ impl std::ops::Div<f32> for Vec3 {
     }
 }
 
-impl From<Quat> for Vec3 {
+impl const From<Quat> for Vec3 {
+    #[inline(always)]
     fn from(quat: Quat) -> Vec3 {
         Vec3 {
             x: quat.i,
@@ -222,21 +265,21 @@ impl From<Quat> for Vec3 {
 }
 
 impl Vec3 {
-    fn i() -> Vec3 {
+    const fn i() -> Vec3 {
         Vec3 {
             x: 1.0,
             ..Vec3::default()
         }
     }
 
-    fn j() -> Vec3 {
+    const fn j() -> Vec3 {
         Vec3 {
             y: 1.0,
             ..Vec3::default()
         }
     }
 
-    fn k() -> Vec3 {
+    const fn k() -> Vec3 {
         Vec3 {
             z: 1.0,
             ..Vec3::default()
@@ -276,7 +319,7 @@ struct Quat {
     k: f32,
 }
 
-impl Default for Quat {
+impl const Default for Quat {
     fn default() -> Quat {
         Quat {
             r: 0.0,
@@ -289,6 +332,14 @@ impl Default for Quat {
 
 impl std::ops::Add for Quat {
     type Output = Quat;
+    /// Adds two quats together
+    /// ```
+    /// let a: Quat = Quat {0.0, 1.0, 0.0, 1.0};
+    /// let b: Quat = Quat {1.0, 0.0, 1.0, 0.0};
+    /// let c: Quat = a + b;
+    /// let expected = Quat {1.0, 1.0, 1.0, 1.0};
+    /// assert_eq!(c, expected);
+    /// ```
     fn add(self, rhs: Quat) -> Quat {
         Quat {
             r: self.r + rhs.r,
@@ -328,7 +379,12 @@ impl std::ops::Sub for Quat {
 impl std::ops::Neg for Quat {
     type Output = Quat;
     fn neg(self) -> Quat {
-        Quat::default() - self
+        Quat {
+            r: -self.r,
+            i: -self.i,
+            j: -self.j,
+            k: -self.k,
+        }
     }
 }
 
@@ -387,7 +443,7 @@ impl From<Vec3> for Quat {
     }
 }
 
-impl From<f32> for Quat {
+impl const From<f32> for Quat {
     fn from(r: f32) -> Quat {
         Quat {
             r,
@@ -397,7 +453,7 @@ impl From<f32> for Quat {
 }
 
 impl Quat {
-    fn one() -> Quat {
+    const fn one() -> Quat {
         Quat {
             r: 1.0,
             ..Quat::default()
@@ -475,6 +531,11 @@ struct Camera {
 }
 
 impl Camera {
+    /// Helper for get_px
+    fn get_double_px(&self, world: &World, x: f32, y: f32) -> (Color, Color) {
+        return (self.get_px(world, x, y), self.get_px(world, x, y + 1.0));
+    }
+
     fn get_px(&self, world: &World, x: f32, y: f32) -> Color {
         let ray = Vec3 {
             x: self.focal_length,

@@ -9,3 +9,5 @@ edition = "2021"
 crossterm = "0.25.0"
 ron = "0.8.0"
 serde = { version = "1.0.147", features = ["derive"] }
+rayon = "1.5"
+lazy_static = "1"
