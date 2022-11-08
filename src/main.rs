@@ -27,7 +27,7 @@ fn main() -> Result<()> {
             position: -0.8 * Vec3::i(),
             rotation: Quat::one(),
         },
-        px_per_unit: 40.0,
+        px_per_unit: 60.0,
         focal_length: 2.0,
     };
 
