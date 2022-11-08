@@ -515,7 +515,7 @@ impl Camera {
             return None;
         }
 
-        // Check if within triangular prism
+        // Check if within tetrahedron
         let [(a, d, g), (b, e, h), (c, f, i)] =
             [p1, p2, p3].map(|p| p - pos).map(|v| (v.x, v.y, v.z));
 
