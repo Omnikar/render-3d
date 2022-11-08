@@ -184,6 +184,7 @@ impl std::ops::Add<Vec3> for f32 {
 }
 
 impl std::ops::AddAssign for Vec3 {
+    #[inline(always)]
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
     }
@@ -340,6 +341,7 @@ impl std::ops::Add for Quat {
     /// let expected = Quat {1.0, 1.0, 1.0, 1.0};
     /// assert_eq!(c, expected);
     /// ```
+    #[inline(always)]
     fn add(self, rhs: Quat) -> Quat {
         Quat {
             r: self.r + rhs.r,
@@ -352,6 +354,7 @@ impl std::ops::Add for Quat {
 
 impl std::ops::Add<f32> for Quat {
     type Output = Quat;
+    #[inline(always)]
     fn add(self, rhs: f32) -> Quat {
         self + Quat::from(rhs)
     }
@@ -359,6 +362,7 @@ impl std::ops::Add<f32> for Quat {
 
 impl std::ops::Add<Quat> for f32 {
     type Output = Quat;
+    #[inline(always)]
     fn add(self, rhs: Quat) -> Quat {
         rhs + self
     }
@@ -366,6 +370,7 @@ impl std::ops::Add<Quat> for f32 {
 
 impl std::ops::Sub for Quat {
     type Output = Quat;
+    #[inline(always)]
     fn sub(self, rhs: Quat) -> Quat {
         Quat {
             r: self.r - rhs.r,
@@ -378,6 +383,7 @@ impl std::ops::Sub for Quat {
 
 impl std::ops::Neg for Quat {
     type Output = Quat;
+    #[inline(always)]
     fn neg(self) -> Quat {
         Quat {
             r: -self.r,
@@ -390,6 +396,7 @@ impl std::ops::Neg for Quat {
 
 impl std::ops::Mul for Quat {
     type Output = Quat;
+    #[inline(always)]
     fn mul(self, rhs: Quat) -> Quat {
         Quat {
             r: self.r * rhs.r - self.i * rhs.i - self.j * rhs.j - self.k * rhs.k,
@@ -402,6 +409,7 @@ impl std::ops::Mul for Quat {
 
 impl std::ops::Mul<f32> for Quat {
     type Output = Quat;
+    #[inline(always)]
     fn mul(self, rhs: f32) -> Quat {
         Quat {
             r: self.r * rhs,
@@ -414,12 +422,14 @@ impl std::ops::Mul<f32> for Quat {
 
 impl std::ops::Mul<Vec3> for Quat {
     type Output = Quat;
+    #[inline(always)]
     fn mul(self, rhs: Vec3) -> Quat {
         self * Quat::from(rhs)
     }
 }
 
 impl std::ops::MulAssign<f32> for Quat {
+    #[inline(always)]
     fn mul_assign(&mut self, rhs: f32) {
         *self = *self * rhs;
     }
@@ -427,12 +437,14 @@ impl std::ops::MulAssign<f32> for Quat {
 
 impl std::ops::Mul<Quat> for f32 {
     type Output = Quat;
+    #[inline(always)]
     fn mul(self, rhs: Quat) -> Quat {
         rhs * self
     }
 }
 
 impl From<Vec3> for Quat {
+    #[inline(always)]
     fn from(vec: Vec3) -> Quat {
         Quat {
             r: 0.0,
@@ -444,6 +456,7 @@ impl From<Vec3> for Quat {
 }
 
 impl const From<f32> for Quat {
+    #[inline(always)]
     fn from(r: f32) -> Quat {
         Quat {
             r,
