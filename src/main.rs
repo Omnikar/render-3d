@@ -83,7 +83,6 @@ fn main() -> Result<()> {
             };
 
             match event.code {
-                
                 KeyCode::Char('j') => rotation(PI_FRAC_32, Vec3::k()),
                 KeyCode::Char('l') => rotation(-PI_FRAC_32, Vec3::k()),
                 KeyCode::Char('k') => rotation(PI_FRAC_32, Vec3::j()),
