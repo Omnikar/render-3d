@@ -16,7 +16,7 @@ use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use serde::Deserialize;
 use std::io::{stdout, Write};
 
-const DIMS: (u16, u16) = (500, 250);
+const DIMS: (u16, u16) = (225, 150);
 
 
 const PI_FRAC_32: f32 = 0.09817477;
