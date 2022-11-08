@@ -17,9 +17,8 @@ use serde::Deserialize;
 use std::io::{stdout, Write};
 
 const DIMS: (u16, u16) = (225, 150);
-
-
 const PI_FRAC_32: f32 = 0.09817477;
+
 fn main() -> Result<()> {
     let world = ron::from_str::<World>(include_str!("../scenes/sample.ron")).unwrap();
     let mut camera = Camera {
