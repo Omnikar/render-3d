@@ -18,6 +18,8 @@ use std::io::{stdout, Write};
 
 const DIMS: (u16, u16) = (500, 250);
 
+
+const PI_FRAC_32: f32 = 0.09817477;
 fn main() -> Result<()> {
     let world = ron::from_str::<World>(include_str!("../scenes/sample.ron")).unwrap();
     let mut camera = Camera {
@@ -81,12 +83,13 @@ fn main() -> Result<()> {
             };
 
             match event.code {
-                KeyCode::Char('j') => rotation(std::f32::consts::FRAC_PI_8 / 4.0, Vec3::k()),
-                KeyCode::Char('l') => rotation(-std::f32::consts::FRAC_PI_8 / 4.0, Vec3::k()),
-                KeyCode::Char('k') => rotation(std::f32::consts::FRAC_PI_8 / 4.0, Vec3::j()),
-                KeyCode::Char('i') => rotation(-std::f32::consts::FRAC_PI_8 / 4.0, Vec3::j()),
-                KeyCode::Char('o') => rotation(std::f32::consts::FRAC_PI_8 / 4.0, Vec3::i()),
-                KeyCode::Char('u') => rotation(-std::f32::consts::FRAC_PI_8 / 4.0, Vec3::i()),
+                
+                KeyCode::Char('j') => rotation(PI_FRAC_32, Vec3::k()),
+                KeyCode::Char('l') => rotation(-PI_FRAC_32, Vec3::k()),
+                KeyCode::Char('k') => rotation(PI_FRAC_32, Vec3::j()),
+                KeyCode::Char('i') => rotation(-PI_FRAC_32, Vec3::j()),
+                KeyCode::Char('o') => rotation(PI_FRAC_32, Vec3::i()),
+                KeyCode::Char('u') => rotation(-PI_FRAC_32, Vec3::i()),
                 _ => (),
             }
 
