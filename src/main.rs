@@ -7,10 +7,9 @@ mod world;
 
 use camera::Camera;
 use math::{Quat, Vec3};
-use world::{Color, Transform, World};
-
 use pixels::{Pixels, SurfaceTexture};
 use rayon::prelude::*;
+use std::time::Duration;
 use winit::{
     dpi::LogicalSize,
     event::{Event, VirtualKeyCode},
@@ -18,9 +17,11 @@ use winit::{
     window::WindowBuilder,
 };
 use winit_input_helper::WinitInputHelper;
+use world::{Transform, World};
 
 /// Dimentions of the Window (in pixels), width by height
 const DIMS: (u32, u32) = (400, 400);
+const HALF_DIMS: (f32, f32) = (DIMS.0 as f32 / 2.0, DIMS.1 as f32 / 2.0);
 
 fn main() {
     let world = ron::from_str::<World>(include_str!("../scenes/sample.ron"))
@@ -53,7 +54,19 @@ fn main() {
         Pixels::new(DIMS.0, DIMS.1, surface_texture).expect("failed to create pixels")
     };
 
-    queue_render(pixels.get_frame_mut(), &world, &camera);
+    // fill alpha channel to avoid setting it later
+    for pixel in pixels.get_frame_mut().chunks_exact_mut(4) {
+        pixel[3] = 255u8;
+    }
+
+    let mut avg_frametime: Duration = Duration::ZERO;
+    let mut n_frames: u32 = 0u32;
+    queue_render(
+        pixels.get_frame_mut(),
+        &world,
+        &camera,
+        Some((&mut avg_frametime, &mut n_frames)),
+    );
 
     let mut last_frame = std::time::Instant::now();
 
@@ -162,7 +175,12 @@ fn main() {
 
         // Draw the current frame
         if keyboard_input || redraw_requested {
-            queue_render(pixels.get_frame_mut(), &world, &camera);
+            queue_render(
+                pixels.get_frame_mut(),
+                &world,
+                &camera,
+                Some((&mut avg_frametime, &mut n_frames)),
+            );
             if pixels
                 .render()
                 .map_err(|e| panic!("pixels.render() failed: {}", e))
@@ -175,28 +193,41 @@ fn main() {
     });
 }
 
-fn queue_render(frame: &mut [u8], world: &World, camera: &Camera) {
+fn queue_render(
+    frame: &mut [u8],
+    world: &World,
+    camera: &Camera,
+    frame_data: Option<(&mut std::time::Duration, &mut u32)>,
+) {
     // Create a instant here to time how long it takes to render a frame
     let now = std::time::Instant::now();
 
     // Used to zip with frame data in place of enumerating (which cannot be done with par_chunks_exact_mut)
-    let index = 0..(DIMS.0 * DIMS.1);
+    const INDEX: std::ops::Range<u32> = 0..(DIMS.0 * DIMS.1);
 
     frame
         .par_chunks_exact_mut(4)
-        .zip(index)
+        .zip(INDEX)
         .for_each(|(pixel, i)| {
             // (x, y) of pixel on screen
             let (x, y): (i32, i32) = (((i % DIMS.0) as i32), ((i / DIMS.0) as i32));
-            let x_w = x as f32 - (DIMS.0 as f32) / 2.0;
-            let y_w = y as f32 - (DIMS.1 as f32) / 2.0;
 
-            let rgb: Color = camera.get_px(world, x_w, y_w);
-            let rgba: [u8; 4] = [rgb[0], rgb[1], rgb[2], 255];
-
-            pixel.copy_from_slice(&rgba);
+            let x_w = x as f32 - HALF_DIMS.0;
+            let y_w = y as f32 - HALF_DIMS.1;
+            let rgb: &[u8] = &camera.get_px(world, x_w, y_w).0;
+            (pixel[0], pixel[1], pixel[2]) = (rgb[0], rgb[1], rgb[2])
         });
 
-    // TODO: Add toggleable debug overlay with this information
-    eprintln!("Frame took: {}ms", now.elapsed().as_millis());
+    let took = now.elapsed();
+
+    if let Some((avg_frametime, n_frames)) = frame_data {
+        *n_frames += 1;
+        let avg_nanos = ((((*n_frames - 1) as f32) * (avg_frametime.as_nanos() as f32))
+            + took.as_nanos() as f32)
+            / (*n_frames as f32);
+        *avg_frametime = Duration::from_nanos(avg_nanos as u64);
+        eprintln!("Frame took: {:#?} (avg: {:#?})", took, avg_frametime);
+    } else {
+        eprintln!("Frame took: {:#?}", took);
+    }
 }

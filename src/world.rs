@@ -38,6 +38,7 @@ impl std::ops::Mul<f32> for Color {
 }
 
 impl Color {
+    #[allow(dead_code)]
     fn interpolate(self, rhs: Color, ratio: f32) -> Color {
         Color([0, 1, 2].map(|i| {
             (self[i] as f32 * (1.0 - ratio)).round() as u8 + (rhs[i] as f32 * ratio).round() as u8
