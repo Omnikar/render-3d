@@ -164,14 +164,14 @@ fn queue_render(frame: &mut [u8], world: &World, camera: &Camera) {
     // Create a instant here to time how long it takes to render a frame
     let now = std::time::Instant::now();
 
-    // used to zip with frame data in place of enumerating (which cannot be done with par_chunks_exact_mut)
+    // Used to zip with frame data in place of enumerating (which cannot be done with par_chunks_exact_mut)
     let index = 0..(DIMS.0 * DIMS.1);
 
     frame
         .par_chunks_exact_mut(4)
         .zip(index)
         .for_each(|(pixel, i)| {
-            // (x,y) of pixel on screen
+            // (x, y) of pixel on screen
             let (x, y): (i32, i32) = (((i % DIMS.0) as i32), ((i / DIMS.0) as i32));
             let x_w = x as f32 - (DIMS.0 as f32) / 2.0;
             let y_w = y as f32 - (DIMS.1 as f32) / 2.0;
@@ -182,8 +182,8 @@ fn queue_render(frame: &mut [u8], world: &World, camera: &Camera) {
             pixel.copy_from_slice(&rgba);
         });
 
-    // TODO: add toggleable debug overlay with this information
-    println!("Frame took: {}ms", now.elapsed().as_millis());
+    // TODO: Add toggleable debug overlay with this information
+    eprintln!("Frame took: {}ms", now.elapsed().as_millis());
 }
 
 #[derive(Clone, Copy, PartialEq, Debug, Deserialize)]
@@ -387,10 +387,10 @@ impl std::ops::Add for Quat {
     type Output = Quat;
     /// Adds two quats together
     /// ```
-    /// let a: Quat = Quat {0.0, 1.0, 0.0, 1.0};
-    /// let b: Quat = Quat {1.0, 0.0, 1.0, 0.0};
+    /// let a: Quat = Quat { r: 0.0, i: 1.0, j: 0.0, k: 1.0};
+    /// let b: Quat = Quat { r: 1.0, i: 0.0, j: 1.0, k: 0.0};
     /// let c: Quat = a + b;
-    /// let expected = Quat {1.0, 1.0, 1.0, 1.0};
+    /// let expected = Quat { r: 1.0, i: 1.0, j: 1.0, k: 1.0};
     /// assert_eq!(c, expected);
     /// ```
     #[inline(always)]
