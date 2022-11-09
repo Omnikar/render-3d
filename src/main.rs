@@ -17,7 +17,8 @@ const DIMS: (u32, u32) = (400, 400);
 const PI_FRAC_32: f32 = 0.09817477;
 
 fn main() {
-    let world = ron::from_str::<World>(include_str!("../scenes/sample.ron")).expect("failed to parse World file");
+    let world = ron::from_str::<World>(include_str!("../scenes/sample.ron"))
+        .expect("failed to parse World file");
     let mut camera = Camera {
         transform: Transform {
             position: -0.8 * Vec3::i(),
