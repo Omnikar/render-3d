@@ -7,10 +7,14 @@ mod world;
 
 use camera::Camera;
 use math::{Quat, Vec3};
-use world::{Color, Transform, World};
+use world::{Transform, World};
 
 use pixels::{Pixels, SurfaceTexture};
 use rayon::prelude::*;
+use std::{
+    collections::VecDeque,
+    time::{Duration, Instant},
+};
 use winit::{
     dpi::LogicalSize,
     event::{Event, VirtualKeyCode},
@@ -21,6 +25,10 @@ use winit_input_helper::WinitInputHelper;
 
 /// Dimentions of the Window (in pixels), width by height
 const DIMS: (u32, u32) = (400, 400);
+const HALF_DIMS: (f32, f32) = (DIMS.0 as f32 / 2.0, DIMS.1 as f32 / 2.0);
+
+/// Number of frames used to create average
+const N_FRAMES: u32 = 20;
 
 fn main() {
     let world = ron::from_str::<World>(include_str!("../scenes/sample.ron"))
@@ -53,14 +61,25 @@ fn main() {
         Pixels::new(DIMS.0, DIMS.1, surface_texture).expect("failed to create pixels")
     };
 
-    queue_render(pixels.get_frame_mut(), &world, &camera);
+    // Fill alpha channel to avoid setting it later
+    for pixel in pixels.get_frame_mut().chunks_exact_mut(4) {
+        pixel[3] = 255u8;
+    }
+
+    let mut frametime_log: VecDeque<Duration> = VecDeque::with_capacity(N_FRAMES as usize);
+    queue_render(
+        pixels.get_frame_mut(),
+        &world,
+        &camera,
+        Some(&mut frametime_log),
+    );
 
     let mut last_frame = std::time::Instant::now();
 
     event_loop.run(move |event, _, control_flow| {
-        let mut this_frame = std::time::Instant::now();
+        let mut this_frame = Instant::now();
         let mut delta_time = this_frame - last_frame;
-        let min_frame_time = std::time::Duration::from_millis(10);
+        let min_frame_time = Duration::from_millis(10);
         if delta_time < min_frame_time {
             std::thread::sleep(min_frame_time - delta_time);
             delta_time = min_frame_time;
@@ -162,7 +181,12 @@ fn main() {
 
         // Draw the current frame
         if keyboard_input || redraw_requested {
-            queue_render(pixels.get_frame_mut(), &world, &camera);
+            queue_render(
+                pixels.get_frame_mut(),
+                &world,
+                &camera,
+                Some(&mut frametime_log),
+            );
             if pixels
                 .render()
                 .map_err(|e| panic!("pixels.render() failed: {}", e))
@@ -175,28 +199,43 @@ fn main() {
     });
 }
 
-fn queue_render(frame: &mut [u8], world: &World, camera: &Camera) {
+fn queue_render(
+    frame: &mut [u8],
+    world: &World,
+    camera: &Camera,
+    frame_data: Option<&mut VecDeque<Duration>>,
+) {
     // Create a instant here to time how long it takes to render a frame
-    let now = std::time::Instant::now();
+    let now = Instant::now();
 
     // Used to zip with frame data in place of enumerating (which cannot be done with par_chunks_exact_mut)
-    let index = 0..(DIMS.0 * DIMS.1);
+    const INDEX: std::ops::Range<u32> = 0..(DIMS.0 * DIMS.1);
 
     frame
         .par_chunks_exact_mut(4)
-        .zip(index)
+        .zip(INDEX)
         .for_each(|(pixel, i)| {
             // (x, y) of pixel on screen
             let (x, y): (i32, i32) = (((i % DIMS.0) as i32), ((i / DIMS.0) as i32));
-            let x_w = x as f32 - (DIMS.0 as f32) / 2.0;
-            let y_w = y as f32 - (DIMS.1 as f32) / 2.0;
 
-            let rgb: Color = camera.get_px(world, x_w, y_w);
-            let rgba: [u8; 4] = [rgb[0], rgb[1], rgb[2], 255];
-
-            pixel.copy_from_slice(&rgba);
+            let x_w = x as f32 - HALF_DIMS.0;
+            let y_w = y as f32 - HALF_DIMS.1;
+            let rgb: &[u8] = &camera.get_px(world, x_w, y_w).0;
+            (pixel[0], pixel[1], pixel[2]) = (rgb[0], rgb[1], rgb[2])
         });
 
-    // TODO: Add toggleable debug overlay with this information
-    eprintln!("Frame took: {}ms", now.elapsed().as_millis());
+    let took = now.elapsed();
+
+    if let Some(frametime_log) = frame_data {
+        if frametime_log.len() == N_FRAMES as usize {
+            frametime_log.pop_back();
+        }
+        frametime_log.push_front(took);
+
+        let avg_frametime = frametime_log.iter().sum::<Duration>() / frametime_log.len() as u32;
+
+        eprintln!("Frame took: {:#?} (avg: {:#?})", took, avg_frametime);
+    } else {
+        eprintln!("Frame took: {:#?}", took);
+    }
 }

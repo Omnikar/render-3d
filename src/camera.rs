@@ -46,7 +46,7 @@ impl Camera {
         let cross = v1.cross(v2);
         let t = -cross.dot(dist) / cross.dot(ray);
 
-        if !t.is_finite() || !t.is_sign_positive() {
+        if !t.is_finite() || t.is_sign_negative() {
             return None;
         }
 
@@ -98,6 +98,7 @@ impl Camera {
             .into_iter()
             .filter(|n| n.is_sign_positive())
             .min_by(f32::total_cmp)?;
+
         let coord = self.transform.position + ray * t;
         let normal = (coord - center).normalize();
         let light_vec = (light - coord).normalize();

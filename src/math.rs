@@ -149,18 +149,22 @@ impl Vec3 {
         }
     }
 
+    #[inline]
     pub fn sq_mag(self) -> f32 {
         self.x.powi(2) + self.y.powi(2) + self.z.powi(2)
     }
 
+    #[inline]
     pub fn mag(self) -> f32 {
         self.sq_mag().sqrt()
     }
 
+    #[inline]
     pub fn normalize(self) -> Vec3 {
         self / self.mag()
     }
 
+    #[inline]
     pub fn rotate(self, rot: Quat) -> Vec3 {
         if rot == Quat::one() {
             self
@@ -169,10 +173,12 @@ impl Vec3 {
         }
     }
 
+    #[inline]
     pub fn dot(self, rhs: Vec3) -> f32 {
         self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
     }
 
+    #[inline]
     pub fn cross(self, rhs: Vec3) -> Vec3 {
         Vec3::from(self * Quat::from(rhs))
     }
@@ -348,10 +354,12 @@ impl Quat {
         }
     }
 
+    #[inline]
     pub fn sq_mag(self) -> f32 {
         self.r.powi(2) + self.i.powi(2) + self.j.powi(2) + self.k.powi(2)
     }
 
+    #[inline]
     pub fn mag(self) -> f32 {
         self.sq_mag().sqrt()
     }
