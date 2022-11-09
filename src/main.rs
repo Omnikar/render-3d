@@ -2,6 +2,7 @@
 #![feature(const_trait_impl)]
 
 use pixels::{Pixels, SurfaceTexture};
+use rayon::prelude::*;
 use serde::Deserialize;
 use winit::dpi::LogicalSize;
 use winit::event::{Event, VirtualKeyCode};
@@ -144,21 +145,26 @@ fn main() {
 fn queue_render(frame: &mut [u8], world: &World, camera: &Camera) {
     // Create a instant here to time how long it takes to render a frame
     let now = std::time::Instant::now();
-    for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
-        // (x,y) of pixel on screen
-        let (x, y): (i32, i32) = (
-            ((i % DIMS.0 as usize) as i32),
-            ((i / DIMS.0 as usize) as i32),
-        );
-        let x_w = x as f32 - (DIMS.0 as f32) / 2.0;
-        let y_w = y as f32 - (DIMS.1 as f32) / 4.0;
+    
+    // used to zip with frame data in place of enumerating (which cannot be done with par_chunks_exact_mut)
+    let index = 0..(DIMS.0 * DIMS.1);
 
-        let rgb: Color = camera.get_px(world, x_w.into(), y_w.into());
-        let rgba: [u8; 4] = [rgb[0], rgb[1], rgb[2], 255];
+    frame
+        .par_chunks_exact_mut(4)
+        .zip(index)
+        .for_each(|(pixel, i)| {
+            // (x,y) of pixel on screen
+            let (x, y): (i32, i32) = (((i % DIMS.0) as i32), ((i / DIMS.0) as i32));
+            let x_w = x as f32 - (DIMS.0 as f32) / 2.0;
+            let y_w = y as f32 - (DIMS.1 as f32) / 4.0;
 
-        pixel.copy_from_slice(&rgba);
-    }
-    // TODO: add toggleable debug overlay
+            let rgb: Color = camera.get_px(world, x_w.into(), y_w.into());
+            let rgba: [u8; 4] = [rgb[0], rgb[1], rgb[2], 255];
+
+            pixel.copy_from_slice(&rgba);
+        });
+
+    // TODO: add toggleable debug overlay with this information
     println!("Frame took: {}ms", now.elapsed().as_millis());
 }
 
