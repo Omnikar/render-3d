@@ -17,7 +17,7 @@ const DIMS: (u32, u32) = (400, 400);
 const PI_FRAC_32: f32 = 0.09817477;
 
 fn main() {
-    let world = ron::from_str::<World>(include_str!("../scenes/sample.ron")).unwrap();
+    let world = ron::from_str::<World>(include_str!("../scenes/sample.ron")).expect("failed to parse World file");
     let mut camera = Camera {
         transform: Transform {
             position: -0.8 * Vec3::i(),
@@ -96,7 +96,7 @@ fn main() {
                 *rot = new_rot * *rot;
             };
 
-            let mut rotated: bool = true;
+            let mut did_rotation: bool = true;
             if input.key_pressed(VirtualKeyCode::J) {
                 rotation(PI_FRAC_32, Vec3::k());
             } else if input.key_pressed(VirtualKeyCode::L) {
@@ -110,10 +110,10 @@ fn main() {
             } else if input.key_pressed(VirtualKeyCode::O) {
                 rotation(-PI_FRAC_32, Vec3::i())
             } else {
-                rotated = false;
+                did_rotation = false;
             }
 
-            rotated || did_movement
+            did_rotation || did_movement
         } else {
             false
         };
