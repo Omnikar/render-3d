@@ -326,7 +326,7 @@ impl Vec3 {
     }
 
     fn rotate(self, rot: Quat) -> Vec3 {
-        if rot == Quat::default() {
+        if rot == Quat::one() {
             self
         } else {
             Vec3::from(rot * self * rot.conj())
