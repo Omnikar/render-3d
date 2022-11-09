@@ -7,6 +7,8 @@ mod world;
 
 use camera::Camera;
 use math::{Quat, Vec3};
+use world::{Transform, World};
+
 use pixels::{Pixels, SurfaceTexture};
 use rayon::prelude::*;
 use std::time::{Duration, Instant};
@@ -17,7 +19,6 @@ use winit::{
     window::WindowBuilder,
 };
 use winit_input_helper::WinitInputHelper;
-use world::{Transform, World};
 
 /// Dimentions of the Window (in pixels), width by height
 const DIMS: (u32, u32) = (400, 400);
