@@ -15,9 +15,6 @@ use winit_input_helper::WinitInputHelper;
 /// Dimentions of the Window (in pixels), width by height
 const DIMS: (u32, u32) = (400, 400);
 
-/// PI/32
-const PI_FRAC_32: f32 = 0.09817477;
-
 fn main() {
     let world = ron::from_str::<World>(include_str!("../scenes/sample.ron"))
         .expect("failed to parse World file");
@@ -51,42 +48,66 @@ fn main() {
 
     queue_render(pixels.get_frame_mut(), &world, &camera);
 
+    let mut last_frame = std::time::Instant::now();
+
     event_loop.run(move |event, _, control_flow| {
-        let keyboard_input: bool = if input.update(&event) {
+        let this_frame = std::time::Instant::now();
+        let mut delta_time = this_frame - last_frame;
+        let min_frame_time = std::time::Duration::from_millis(10);
+        if delta_time < min_frame_time {
+            std::thread::sleep(min_frame_time - delta_time);
+            delta_time = min_frame_time;
+        }
+        let delta_time = delta_time.as_secs_f32();
+        let keyboard_input: bool = input.update(&event) && {
+            const MOVE_SPEED: f32 = 3.0;
+            const TURN_SPEED: f32 = std::f32::consts::FRAC_PI_2;
+            let mut did_movement: bool = false;
+
             let mut movement = |delta: Vec3| {
-                camera.transform.position += delta.rotate(camera.transform.rotation);
+                camera.transform.position += delta.rotate(camera.transform.rotation) * delta_time;
+                did_movement = true;
             };
 
-            const MOVEMENT_MOD: f32 = 0.1;
-            let mut did_movement: bool = true;
-
-            if input.key_pressed(VirtualKeyCode::W) {
-                movement(MOVEMENT_MOD * Vec3::i());
-            } else if input.key_pressed(VirtualKeyCode::S) {
-                movement(-MOVEMENT_MOD * Vec3::i());
-            } else if input.key_pressed(VirtualKeyCode::A) {
-                movement(MOVEMENT_MOD * Vec3::j());
-            } else if input.key_pressed(VirtualKeyCode::D) {
-                movement(-MOVEMENT_MOD * Vec3::j());
-            } else if input.key_pressed(VirtualKeyCode::E) {
-                movement(MOVEMENT_MOD * Vec3::k());
-            } else if input.key_pressed(VirtualKeyCode::Q) {
-                movement(-MOVEMENT_MOD * Vec3::k());
-            } else if input.key_pressed(VirtualKeyCode::R) {
-                camera.focal_length += MOVEMENT_MOD;
-            } else if input.key_pressed(VirtualKeyCode::F) {
-                camera.focal_length -= MOVEMENT_MOD;
-            } else if input.key_pressed(VirtualKeyCode::X) {
-                movement(MOVEMENT_MOD * Vec3::i());
-                camera.focal_length -= MOVEMENT_MOD;
-            } else if input.key_pressed(VirtualKeyCode::Z) {
-                movement(-MOVEMENT_MOD * Vec3::i());
-                camera.focal_length += MOVEMENT_MOD;
-            } else {
-                did_movement = false;
+            if input.key_held(VirtualKeyCode::W) {
+                movement(MOVE_SPEED * Vec3::i());
+            }
+            if input.key_held(VirtualKeyCode::S) {
+                movement(-MOVE_SPEED * Vec3::i());
+            }
+            if input.key_held(VirtualKeyCode::A) {
+                movement(MOVE_SPEED * Vec3::j());
+            }
+            if input.key_held(VirtualKeyCode::D) {
+                movement(-MOVE_SPEED * Vec3::j());
+            }
+            if input.key_held(VirtualKeyCode::E) {
+                movement(MOVE_SPEED * Vec3::k());
+            }
+            if input.key_held(VirtualKeyCode::Q) {
+                movement(-MOVE_SPEED * Vec3::k());
+            }
+            if input.key_held(VirtualKeyCode::X) {
+                movement(MOVE_SPEED * Vec3::i());
+                camera.focal_length -= MOVE_SPEED * delta_time;
+            }
+            if input.key_held(VirtualKeyCode::Z) {
+                movement(-MOVE_SPEED * Vec3::i());
+                camera.focal_length += MOVE_SPEED * delta_time;
+            }
+            if input.key_held(VirtualKeyCode::R) {
+                camera.focal_length += MOVE_SPEED * delta_time;
+                did_movement = true;
+            }
+            if input.key_held(VirtualKeyCode::F) {
+                camera.focal_length -= MOVE_SPEED * delta_time;
+                did_movement = true;
             }
 
+            let mut did_rotation: bool = false;
+
             let mut rotation = |angle: f32, axis: Vec3| {
+                let angle = angle * delta_time;
                 let hf_angle = angle / 2.0;
                 let new_rot = hf_angle.cos() + axis * hf_angle.sin();
 
@@ -97,28 +118,29 @@ fn main() {
                 // precision errors cause self-fueleing inaccuracy that becomes worse with each rotation.
                 let new_rot = new_rot * new_rot.mag().recip();
                 *rot = new_rot * *rot;
+                did_rotation = true;
             };
 
-            let mut did_rotation: bool = true;
-            if input.key_pressed(VirtualKeyCode::J) {
-                rotation(PI_FRAC_32, Vec3::k());
-            } else if input.key_pressed(VirtualKeyCode::L) {
-                rotation(-PI_FRAC_32, Vec3::k());
-            } else if input.key_pressed(VirtualKeyCode::K) {
-                rotation(PI_FRAC_32, Vec3::j());
-            } else if input.key_pressed(VirtualKeyCode::I) {
-                rotation(-PI_FRAC_32, Vec3::j());
-            } else if input.key_pressed(VirtualKeyCode::U) {
-                rotation(PI_FRAC_32, Vec3::i());
-            } else if input.key_pressed(VirtualKeyCode::O) {
-                rotation(-PI_FRAC_32, Vec3::i())
-            } else {
-                did_rotation = false;
+            if input.key_held(VirtualKeyCode::J) {
+                rotation(TURN_SPEED, Vec3::k());
+            }
+            if input.key_held(VirtualKeyCode::L) {
+                rotation(-TURN_SPEED, Vec3::k());
+            }
+            if input.key_held(VirtualKeyCode::K) {
+                rotation(TURN_SPEED, Vec3::j());
+            }
+            if input.key_held(VirtualKeyCode::I) {
+                rotation(-TURN_SPEED, Vec3::j());
+            }
+            if input.key_held(VirtualKeyCode::O) {
+                rotation(TURN_SPEED, Vec3::i());
+            }
+            if input.key_held(VirtualKeyCode::U) {
+                rotation(-TURN_SPEED, Vec3::i())
             }
 
             did_rotation || did_movement
-        } else {
-            false
         };
 
         let redraw_requested: bool = matches!(event, Event::RedrawRequested(_));
@@ -132,9 +154,9 @@ fn main() {
                 .is_err()
             {
                 *control_flow = ControlFlow::Exit;
-                
             }
         }
+        last_frame = this_frame;
     });
 }
 
