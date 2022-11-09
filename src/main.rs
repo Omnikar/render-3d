@@ -1,17 +1,26 @@
-use crossterm::{
-    cursor,
-    event::{self, Event, KeyCode, KeyModifiers},
-    execute,
-    style::{self, Stylize},
-    terminal, QueueableCommand, Result,
-};
+// Requires nightly, allows for constant implementations of traits, for Self::Default for storage and small perf improvements.
+#![feature(const_trait_impl)]
+
+use pixels::{Pixels, SurfaceTexture};
+use rayon::prelude::*;
 use serde::Deserialize;
-use std::io::{stdout, Write};
+use winit::{
+    dpi::LogicalSize,
+    event::{Event, VirtualKeyCode},
+    event_loop::{ControlFlow, EventLoop},
+    window::WindowBuilder,
+};
+use winit_input_helper::WinitInputHelper;
 
-const DIMS: (u16, u16) = (225, 150);
+/// Dimentions of the Window (in pixels), width by height
+const DIMS: (u32, u32) = (400, 400);
 
-fn main() -> Result<()> {
-    let world = ron::from_str::<World>(include_str!("../scenes/sample.ron")).unwrap();
+/// PI/32
+const PI_FRAC_32: f32 = 0.09817477;
+
+fn main() {
+    let world = ron::from_str::<World>(include_str!("../scenes/sample.ron"))
+        .expect("failed to parse World file");
     let mut camera = Camera {
         transform: Transform {
             position: -0.8 * Vec3::i(),
@@ -21,43 +30,60 @@ fn main() -> Result<()> {
         focal_length: 2.0,
     };
 
-    crossterm::terminal::enable_raw_mode()?;
+    let event_loop = EventLoop::new();
+    let mut input = WinitInputHelper::new();
+    let window = {
+        let size = LogicalSize::new(DIMS.0 as f64, DIMS.1 as f64);
+        WindowBuilder::new()
+            .with_title("Raytracing Test")
+            .with_inner_size(size)
+            .with_min_inner_size(size)
+            .with_decorations(false) // weird graphical issue happens without this (at least on gnome + wayland) further investigation needed
+            .build(&event_loop)
+            .expect("WindowBuilder failed")
+    };
 
-    let mut stdout = std::io::BufWriter::new(stdout());
+    let mut pixels = {
+        let window_size = window.inner_size();
+        let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
+        Pixels::new(DIMS.0, DIMS.1, surface_texture).expect("failed to create pixels")
+    };
 
-    execute!(stdout, cursor::Hide, terminal::EnterAlternateScreen)?;
+    queue_render(pixels.get_frame_mut(), &world, &camera);
 
-    queue_render(&mut stdout, &world, &camera)?;
-    stdout.flush()?;
-
-    while let Ok(event) = event::read() {
-        if let Event::Key(event) = event {
-            if event.modifiers == KeyModifiers::CONTROL && event.code == KeyCode::Char('c') {
-                break;
-            }
-
+    event_loop.run(move |event, _, control_flow| {
+        let keyboard_input: bool = if input.update(&event) {
             let mut movement = |delta: Vec3| {
                 camera.transform.position += delta.rotate(camera.transform.rotation);
             };
 
-            match event.code {
-                KeyCode::Char('w') => movement(0.1 * Vec3::i()),
-                KeyCode::Char('s') => movement(-0.1 * Vec3::i()),
-                KeyCode::Char('a') => movement(0.1 * Vec3::j()),
-                KeyCode::Char('d') => movement(-0.1 * Vec3::j()),
-                KeyCode::Char('e') => movement(0.1 * Vec3::k()),
-                KeyCode::Char('q') => movement(-0.1 * Vec3::k()),
-                KeyCode::Char('r') => camera.focal_length += 0.1,
-                KeyCode::Char('f') => camera.focal_length -= 0.1,
-                KeyCode::Char('x') => {
-                    movement(0.1 * Vec3::i());
-                    camera.focal_length -= 0.1;
-                }
-                KeyCode::Char('z') => {
-                    movement(-0.1 * Vec3::i());
-                    camera.focal_length += 0.1;
-                }
-                _ => (),
+            const MOVEMENT_MOD: f32 = 0.1;
+            let mut did_movement: bool = true;
+
+            if input.key_pressed(VirtualKeyCode::W) {
+                movement(MOVEMENT_MOD * Vec3::i());
+            } else if input.key_pressed(VirtualKeyCode::S) {
+                movement(-MOVEMENT_MOD * Vec3::i());
+            } else if input.key_pressed(VirtualKeyCode::A) {
+                movement(MOVEMENT_MOD * Vec3::j());
+            } else if input.key_pressed(VirtualKeyCode::D) {
+                movement(-MOVEMENT_MOD * Vec3::j());
+            } else if input.key_pressed(VirtualKeyCode::E) {
+                movement(MOVEMENT_MOD * Vec3::k());
+            } else if input.key_pressed(VirtualKeyCode::Q) {
+                movement(-MOVEMENT_MOD * Vec3::k());
+            } else if input.key_pressed(VirtualKeyCode::R) {
+                camera.focal_length += MOVEMENT_MOD;
+            } else if input.key_pressed(VirtualKeyCode::F) {
+                camera.focal_length -= MOVEMENT_MOD;
+            } else if input.key_pressed(VirtualKeyCode::X) {
+                movement(MOVEMENT_MOD * Vec3::i());
+                camera.focal_length -= MOVEMENT_MOD;
+            } else if input.key_pressed(VirtualKeyCode::Z) {
+                movement(-MOVEMENT_MOD * Vec3::i());
+                camera.focal_length += MOVEMENT_MOD;
+            } else {
+                did_movement = false;
             }
 
             let mut rotation = |angle: f32, axis: Vec3| {
@@ -66,47 +92,76 @@ fn main() -> Result<()> {
 
                 let rot = &mut camera.transform.rotation;
                 let new_rot = *rot * new_rot * rot.conj();
+
                 // Mathematically, the magnitude should always remain at 1 already, but floating point
                 // precision errors cause self-fueleing inaccuracy that becomes worse with each rotation.
                 let new_rot = new_rot * new_rot.mag().recip();
                 *rot = new_rot * *rot;
             };
 
-            match event.code {
-                KeyCode::Char('j') => rotation(std::f32::consts::FRAC_PI_8 / 4.0, Vec3::k()),
-                KeyCode::Char('l') => rotation(-std::f32::consts::FRAC_PI_8 / 4.0, Vec3::k()),
-                KeyCode::Char('k') => rotation(std::f32::consts::FRAC_PI_8 / 4.0, Vec3::j()),
-                KeyCode::Char('i') => rotation(-std::f32::consts::FRAC_PI_8 / 4.0, Vec3::j()),
-                KeyCode::Char('o') => rotation(std::f32::consts::FRAC_PI_8 / 4.0, Vec3::i()),
-                KeyCode::Char('u') => rotation(-std::f32::consts::FRAC_PI_8 / 4.0, Vec3::i()),
-                _ => (),
+            let mut did_rotation: bool = true;
+            if input.key_pressed(VirtualKeyCode::J) {
+                rotation(PI_FRAC_32, Vec3::k());
+            } else if input.key_pressed(VirtualKeyCode::L) {
+                rotation(-PI_FRAC_32, Vec3::k());
+            } else if input.key_pressed(VirtualKeyCode::K) {
+                rotation(PI_FRAC_32, Vec3::j());
+            } else if input.key_pressed(VirtualKeyCode::I) {
+                rotation(-PI_FRAC_32, Vec3::j());
+            } else if input.key_pressed(VirtualKeyCode::U) {
+                rotation(PI_FRAC_32, Vec3::i());
+            } else if input.key_pressed(VirtualKeyCode::O) {
+                rotation(-PI_FRAC_32, Vec3::i())
+            } else {
+                did_rotation = false;
             }
 
-            queue_render(&mut stdout, &world, &camera)?;
-            stdout.flush()?;
+            did_rotation || did_movement
+        } else {
+            false
+        };
+
+        let redraw_requested: bool = matches!(event, Event::RedrawRequested(_));
+
+        // Draw the current frame
+        if keyboard_input || redraw_requested {
+            queue_render(pixels.get_frame_mut(), &world, &camera);
+            if pixels
+                .render()
+                .map_err(|e| panic!("pixels.render() failed: {}", e))
+                .is_err()
+            {
+                *control_flow = ControlFlow::Exit;
+                
+            }
         }
-    }
-
-    execute!(stdout, terminal::LeaveAlternateScreen, cursor::Show)?;
-
-    crossterm::terminal::disable_raw_mode()?;
-
-    Ok(())
+    });
 }
 
-fn queue_render(mut stdout: impl Write, world: &World, camera: &Camera) -> Result<()> {
-    for (y_hf, x) in (0..DIMS.1 / 2).flat_map(|y_hf| std::iter::repeat(y_hf).zip(0..DIMS.0)) {
-        let x_fl = x as f32 - (DIMS.0 as f32) / 2.0;
-        let y_hf_fl = y_hf as f32 - (DIMS.1 as f32) / 4.0;
-        stdout
-            .queue(cursor::MoveTo(x, y_hf))?
-            .queue(style::PrintStyledContent(
-                "▀"
-                    .with(camera.get_px(world, x_fl, y_hf_fl * 2.0).into())
-                    .on(camera.get_px(world, x_fl, y_hf_fl * 2.0 + 1.0).into()),
-            ))?;
-    }
-    Ok(())
+fn queue_render(frame: &mut [u8], world: &World, camera: &Camera) {
+    // Create a instant here to time how long it takes to render a frame
+    let now = std::time::Instant::now();
+
+    // used to zip with frame data in place of enumerating (which cannot be done with par_chunks_exact_mut)
+    let index = 0..(DIMS.0 * DIMS.1);
+
+    frame
+        .par_chunks_exact_mut(4)
+        .zip(index)
+        .for_each(|(pixel, i)| {
+            // (x,y) of pixel on screen
+            let (x, y): (i32, i32) = (((i % DIMS.0) as i32), ((i / DIMS.0) as i32));
+            let x_w = x as f32 - (DIMS.0 as f32) / 2.0;
+            let y_w = y as f32 - (DIMS.1 as f32) / 2.0;
+
+            let rgb: Color = camera.get_px(world, x_w, y_w);
+            let rgba: [u8; 4] = [rgb[0], rgb[1], rgb[2], 255];
+
+            pixel.copy_from_slice(&rgba);
+        });
+
+    // TODO: add toggleable debug overlay with this information
+    println!("Frame took: {}ms", now.elapsed().as_millis());
 }
 
 #[derive(Clone, Copy, PartialEq, Debug, Deserialize)]
@@ -116,7 +171,7 @@ struct Vec3 {
     z: f32,
 }
 
-impl Default for Vec3 {
+impl const Default for Vec3 {
     fn default() -> Vec3 {
         Vec3 {
             x: 0.0,
@@ -128,6 +183,7 @@ impl Default for Vec3 {
 
 impl std::ops::Add for Vec3 {
     type Output = Vec3;
+    #[inline(always)]
     fn add(self, rhs: Vec3) -> Vec3 {
         Vec3 {
             x: self.x + rhs.x,
@@ -139,6 +195,7 @@ impl std::ops::Add for Vec3 {
 
 impl std::ops::Add<f32> for Vec3 {
     type Output = Quat;
+    #[inline(always)]
     fn add(self, rhs: f32) -> Quat {
         Quat::from(self) + rhs
     }
@@ -146,12 +203,14 @@ impl std::ops::Add<f32> for Vec3 {
 
 impl std::ops::Add<Vec3> for f32 {
     type Output = Quat;
+    #[inline(always)]
     fn add(self, rhs: Vec3) -> Quat {
         rhs + self
     }
 }
 
 impl std::ops::AddAssign for Vec3 {
+    #[inline(always)]
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
     }
@@ -159,6 +218,7 @@ impl std::ops::AddAssign for Vec3 {
 
 impl std::ops::Sub for Vec3 {
     type Output = Vec3;
+    #[inline(always)]
     fn sub(self, rhs: Vec3) -> Vec3 {
         Vec3 {
             x: self.x - rhs.x,
@@ -170,13 +230,19 @@ impl std::ops::Sub for Vec3 {
 
 impl std::ops::Neg for Vec3 {
     type Output = Vec3;
+    #[inline(always)]
     fn neg(self) -> Vec3 {
-        Vec3::default() - self
+        Vec3 {
+            x: -self.x,
+            y: -self.y,
+            z: -self.z,
+        }
     }
 }
 
 impl std::ops::Mul<Vec3> for f32 {
     type Output = Vec3;
+    #[inline(always)]
     fn mul(self, rhs: Vec3) -> Vec3 {
         Vec3 {
             x: self * rhs.x,
@@ -188,6 +254,7 @@ impl std::ops::Mul<Vec3> for f32 {
 
 impl std::ops::Mul<f32> for Vec3 {
     type Output = Vec3;
+    #[inline(always)]
     fn mul(self, rhs: f32) -> Vec3 {
         rhs * self
     }
@@ -195,6 +262,7 @@ impl std::ops::Mul<f32> for Vec3 {
 
 impl std::ops::Mul<Quat> for Vec3 {
     type Output = Quat;
+    #[inline(always)]
     fn mul(self, rhs: Quat) -> Quat {
         Quat::from(self) * rhs
     }
@@ -202,6 +270,7 @@ impl std::ops::Mul<Quat> for Vec3 {
 
 impl std::ops::Div<f32> for Vec3 {
     type Output = Vec3;
+    #[inline(always)]
     fn div(self, rhs: f32) -> Vec3 {
         Vec3 {
             x: self.x / rhs,
@@ -211,7 +280,8 @@ impl std::ops::Div<f32> for Vec3 {
     }
 }
 
-impl From<Quat> for Vec3 {
+impl const From<Quat> for Vec3 {
+    #[inline(always)]
     fn from(quat: Quat) -> Vec3 {
         Vec3 {
             x: quat.i,
@@ -222,21 +292,21 @@ impl From<Quat> for Vec3 {
 }
 
 impl Vec3 {
-    fn i() -> Vec3 {
+    const fn i() -> Vec3 {
         Vec3 {
             x: 1.0,
             ..Vec3::default()
         }
     }
 
-    fn j() -> Vec3 {
+    const fn j() -> Vec3 {
         Vec3 {
             y: 1.0,
             ..Vec3::default()
         }
     }
 
-    fn k() -> Vec3 {
+    const fn k() -> Vec3 {
         Vec3 {
             z: 1.0,
             ..Vec3::default()
@@ -256,7 +326,11 @@ impl Vec3 {
     }
 
     fn rotate(self, rot: Quat) -> Vec3 {
-        Vec3::from(rot * self * rot.conj())
+        if rot == Quat::one() {
+            self
+        } else {
+            Vec3::from(rot * self * rot.conj())
+        }
     }
 
     fn dot(self, rhs: Vec3) -> f32 {
@@ -276,7 +350,7 @@ struct Quat {
     k: f32,
 }
 
-impl Default for Quat {
+impl const Default for Quat {
     fn default() -> Quat {
         Quat {
             r: 0.0,
@@ -289,6 +363,15 @@ impl Default for Quat {
 
 impl std::ops::Add for Quat {
     type Output = Quat;
+    /// Adds two quats together
+    /// ```
+    /// let a: Quat = Quat {0.0, 1.0, 0.0, 1.0};
+    /// let b: Quat = Quat {1.0, 0.0, 1.0, 0.0};
+    /// let c: Quat = a + b;
+    /// let expected = Quat {1.0, 1.0, 1.0, 1.0};
+    /// assert_eq!(c, expected);
+    /// ```
+    #[inline(always)]
     fn add(self, rhs: Quat) -> Quat {
         Quat {
             r: self.r + rhs.r,
@@ -301,6 +384,7 @@ impl std::ops::Add for Quat {
 
 impl std::ops::Add<f32> for Quat {
     type Output = Quat;
+    #[inline(always)]
     fn add(self, rhs: f32) -> Quat {
         self + Quat::from(rhs)
     }
@@ -308,6 +392,7 @@ impl std::ops::Add<f32> for Quat {
 
 impl std::ops::Add<Quat> for f32 {
     type Output = Quat;
+    #[inline(always)]
     fn add(self, rhs: Quat) -> Quat {
         rhs + self
     }
@@ -315,6 +400,7 @@ impl std::ops::Add<Quat> for f32 {
 
 impl std::ops::Sub for Quat {
     type Output = Quat;
+    #[inline(always)]
     fn sub(self, rhs: Quat) -> Quat {
         Quat {
             r: self.r - rhs.r,
@@ -327,13 +413,20 @@ impl std::ops::Sub for Quat {
 
 impl std::ops::Neg for Quat {
     type Output = Quat;
+    #[inline(always)]
     fn neg(self) -> Quat {
-        Quat::default() - self
+        Quat {
+            r: -self.r,
+            i: -self.i,
+            j: -self.j,
+            k: -self.k,
+        }
     }
 }
 
 impl std::ops::Mul for Quat {
     type Output = Quat;
+    #[inline(always)]
     fn mul(self, rhs: Quat) -> Quat {
         Quat {
             r: self.r * rhs.r - self.i * rhs.i - self.j * rhs.j - self.k * rhs.k,
@@ -346,6 +439,7 @@ impl std::ops::Mul for Quat {
 
 impl std::ops::Mul<f32> for Quat {
     type Output = Quat;
+    #[inline(always)]
     fn mul(self, rhs: f32) -> Quat {
         Quat {
             r: self.r * rhs,
@@ -358,12 +452,14 @@ impl std::ops::Mul<f32> for Quat {
 
 impl std::ops::Mul<Vec3> for Quat {
     type Output = Quat;
+    #[inline(always)]
     fn mul(self, rhs: Vec3) -> Quat {
         self * Quat::from(rhs)
     }
 }
 
 impl std::ops::MulAssign<f32> for Quat {
+    #[inline(always)]
     fn mul_assign(&mut self, rhs: f32) {
         *self = *self * rhs;
     }
@@ -371,12 +467,14 @@ impl std::ops::MulAssign<f32> for Quat {
 
 impl std::ops::Mul<Quat> for f32 {
     type Output = Quat;
+    #[inline(always)]
     fn mul(self, rhs: Quat) -> Quat {
         rhs * self
     }
 }
 
-impl From<Vec3> for Quat {
+impl const From<Vec3> for Quat {
+    #[inline(always)]
     fn from(vec: Vec3) -> Quat {
         Quat {
             r: 0.0,
@@ -387,7 +485,8 @@ impl From<Vec3> for Quat {
     }
 }
 
-impl From<f32> for Quat {
+impl const From<f32> for Quat {
+    #[inline(always)]
     fn from(r: f32) -> Quat {
         Quat {
             r,
@@ -397,7 +496,7 @@ impl From<f32> for Quat {
 }
 
 impl Quat {
-    fn one() -> Quat {
+    const fn one() -> Quat {
         Quat {
             r: 1.0,
             ..Quat::default()
@@ -435,16 +534,6 @@ impl std::ops::Index<usize> for Color {
 impl std::ops::IndexMut<usize> for Color {
     fn index_mut(&mut self, index: usize) -> &mut u8 {
         &mut self.0[index]
-    }
-}
-
-impl From<Color> for style::Color {
-    fn from(color: Color) -> Self {
-        style::Color::Rgb {
-            r: color[0],
-            g: color[1],
-            b: color[2],
-        }
     }
 }
 
@@ -519,12 +608,14 @@ impl Camera {
         let [(a, d, g), (b, e, h), (c, f, i)] =
             [p1, p2, p3].map(|p| p - pos).map(|v| (v.x, v.y, v.z));
 
-        let det_neg =
-            (a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g)).is_sign_negative();
+        let ei_fh = e * i - f * h;
+        let fg_di = f * g - d * i;
+        let dh_eg = d * h - e * g;
+        let det_neg = (a * (ei_fh) + b * (fg_di) + c * (dh_eg)).is_sign_negative();
         if ![
-            ray.x * (e * i - f * h) + ray.y * (c * h - b * i) + ray.z * (b * f - c * e),
-            ray.x * (f * g - d * i) + ray.y * (a * i - c * g) + ray.z * (c * d - a * f),
-            ray.x * (d * h - e * g) + ray.y * (b * g - a * h) + ray.z * (a * e - b * d),
+            ray.x * ei_fh + ray.y * (c * h - b * i) + ray.z * (b * f - c * e),
+            ray.x * fg_di + ray.y * (a * i - c * g) + ray.z * (c * d - a * f),
+            ray.x * dh_eg + ray.y * (b * g - a * h) + ray.z * (a * e - b * d),
         ]
         .iter()
         .all(|n| n.is_sign_positive() ^ det_neg)

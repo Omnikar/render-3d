@@ -6,9 +6,6 @@ The code is a bit disorganized at the moment.
 
 ## Usage
 
-The terminal is currently used as the display, so you should reduce your
-terminal font size.
-
 Build and run, I recommend in release mode.
 ```bash
 cargo run --release
