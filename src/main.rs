@@ -51,12 +51,13 @@ fn main() {
     let mut last_frame = std::time::Instant::now();
 
     event_loop.run(move |event, _, control_flow| {
-        let this_frame = std::time::Instant::now();
+        let mut this_frame = std::time::Instant::now();
         let mut delta_time = this_frame - last_frame;
         let min_frame_time = std::time::Duration::from_millis(10);
         if delta_time < min_frame_time {
             std::thread::sleep(min_frame_time - delta_time);
             delta_time = min_frame_time;
+            this_frame = last_frame + delta_time;
         }
         let delta_time = delta_time.as_secs_f32();
         let keyboard_input: bool = input.update(&event) && {
