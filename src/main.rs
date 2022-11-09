@@ -61,6 +61,13 @@ fn main() {
         }
         let delta_time = delta_time.as_secs_f32();
         let keyboard_input: bool = input.update(&event) && {
+            if (input.key_held(VirtualKeyCode::LControl)
+                || input.key_held(VirtualKeyCode::RControl))
+                && input.key_pressed(VirtualKeyCode::C)
+            {
+                *control_flow = ControlFlow::Exit;
+            }
+
             const MOVE_SPEED: f32 = 3.0;
             const TURN_SPEED: f32 = std::f32::consts::FRAC_PI_2;
             let mut did_movement: bool = false;
