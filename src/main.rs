@@ -227,7 +227,7 @@ fn queue_render(
     let took = now.elapsed();
 
     if let Some(frametime_log) = frame_data {
-        let avg_frametime = frametime_log.iter().sum::<Duration>() / N_FRAMES;
+        let avg_frametime = frametime_log.iter().sum::<Duration>() / frametime_log.len() as u32;
         println!("{:?}", frametime_log);
         if frametime_log.len() == N_FRAMES as usize {
             frametime_log.pop_back();
