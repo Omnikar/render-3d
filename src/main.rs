@@ -4,10 +4,12 @@
 use pixels::{Pixels, SurfaceTexture};
 use rayon::prelude::*;
 use serde::Deserialize;
-use winit::dpi::LogicalSize;
-use winit::event::{Event, VirtualKeyCode};
-use winit::event_loop::{ControlFlow, EventLoop};
-use winit::window::WindowBuilder;
+use winit::{
+    dpi::LogicalSize,
+    event::{Event, VirtualKeyCode},
+    event_loop::{ControlFlow, EventLoop},
+    window::WindowBuilder,
+};
 use winit_input_helper::WinitInputHelper;
 
 /// Dimentions of the Window (in pixels), width by height
@@ -106,7 +108,7 @@ fn main() {
                 rotation(PI_FRAC_32, Vec3::j());
             } else if input.key_pressed(VirtualKeyCode::I) {
                 rotation(-PI_FRAC_32, Vec3::j());
-            } else if input.key_pressed(VirtualKeyCode::O) {
+            } else if input.key_pressed(VirtualKeyCode::U) {
                 rotation(PI_FRAC_32, Vec3::i());
             } else if input.key_pressed(VirtualKeyCode::O) {
                 rotation(-PI_FRAC_32, Vec3::i())
@@ -119,14 +121,7 @@ fn main() {
             false
         };
 
-        // there is probably a way in the API to do this better but this was just very quick
-        let redraw_requested: bool = {
-            if let Event::RedrawRequested(_) = event {
-                true
-            } else {
-                false
-            }
-        };
+        let redraw_requested: bool = matches!(event, Event::RedrawRequested(_));
 
         // Draw the current frame
         if keyboard_input || redraw_requested {
@@ -157,7 +152,7 @@ fn queue_render(frame: &mut [u8], world: &World, camera: &Camera) {
             // (x,y) of pixel on screen
             let (x, y): (i32, i32) = (((i % DIMS.0) as i32), ((i / DIMS.0) as i32));
             let x_w = x as f32 - (DIMS.0 as f32) / 2.0;
-            let y_w = y as f32 - (DIMS.1 as f32) / 4.0;
+            let y_w = y as f32 - (DIMS.1 as f32) / 2.0;
 
             let rgb: Color = camera.get_px(world, x_w.into(), y_w.into());
             let rgba: [u8; 4] = [rgb[0], rgb[1], rgb[2], 255];
@@ -613,16 +608,14 @@ impl Camera {
         let [(a, d, g), (b, e, h), (c, f, i)] =
             [p1, p2, p3].map(|p| p - pos).map(|v| (v.x, v.y, v.z));
 
-        let ei = e * i;
-        let fh = f * h;
-        let fg = f * g;
-        let di = d * i;
-
-        let det_neg = (a * (ei - fh) + b * (fg - di) + c * (d * h - e * g)).is_sign_negative();
+        let ei_fh = e * i - f * h;
+        let fg_di = f * g - d * i;
+        let dh_eg = d * h - e * g;
+        let det_neg = (a * (ei_fh) + b * (fg_di) + c * (dh_eg)).is_sign_negative();
         if ![
-            ray.x * (ei - fh) + ray.y * (c * h - b * i) + ray.z * (b * f - c * e),
-            ray.x * (fg - di) + ray.y * (a * i - c * g) + ray.z * (c * d - a * f),
-            ray.x * (d * h - e * g) + ray.y * (b * g - a * h) + ray.z * (a * e - b * d),
+            ray.x * ei_fh + ray.y * (c * h - b * i) + ray.z * (b * f - c * e),
+            ray.x * fg_di + ray.y * (a * i - c * g) + ray.z * (c * d - a * f),
+            ray.x * dh_eg + ray.y * (b * g - a * h) + ray.z * (a * e - b * d),
         ]
         .iter()
         .all(|n| n.is_sign_positive() ^ det_neg)
