@@ -2,8 +2,6 @@
 
 This is my WIP attempt at implementing a 3D renderer.
 
-The code is a bit disorganized at the moment.
-
 ## Usage
 
 Build and run, I recommend in release mode.
