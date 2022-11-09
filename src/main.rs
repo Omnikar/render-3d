@@ -9,7 +9,7 @@ use camera::Camera;
 use math::{Quat, Vec3};
 use pixels::{Pixels, SurfaceTexture};
 use rayon::prelude::*;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use winit::{
     dpi::LogicalSize,
     event::{Event, VirtualKeyCode},
@@ -71,9 +71,9 @@ fn main() {
     let mut last_frame = std::time::Instant::now();
 
     event_loop.run(move |event, _, control_flow| {
-        let mut this_frame = std::time::Instant::now();
+        let mut this_frame = Instant::now();
         let mut delta_time = this_frame - last_frame;
-        let min_frame_time = std::time::Duration::from_millis(10);
+        let min_frame_time = Duration::from_millis(10);
         if delta_time < min_frame_time {
             std::thread::sleep(min_frame_time - delta_time);
             delta_time = min_frame_time;
@@ -197,10 +197,10 @@ fn queue_render(
     frame: &mut [u8],
     world: &World,
     camera: &Camera,
-    frame_data: Option<(&mut std::time::Duration, &mut u32)>,
+    frame_data: Option<(&mut Duration, &mut u32)>,
 ) {
     // Create a instant here to time how long it takes to render a frame
-    let now = std::time::Instant::now();
+    let now = Instant::now();
 
     // Used to zip with frame data in place of enumerating (which cannot be done with par_chunks_exact_mut)
     const INDEX: std::ops::Range<u32> = 0..(DIMS.0 * DIMS.1);
