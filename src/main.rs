@@ -61,7 +61,7 @@ fn main() {
         Pixels::new(DIMS.0, DIMS.1, surface_texture).expect("failed to create pixels")
     };
 
-    // fill alpha channel to avoid setting it later
+    // Fill alpha channel to avoid setting it later
     for pixel in pixels.get_frame_mut().chunks_exact_mut(4) {
         pixel[3] = 255u8;
     }
