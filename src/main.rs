@@ -17,7 +17,7 @@ const DIMS: (u32, u32) = (400, 400);
 const PI_FRAC_32: f32 = 0.09817477;
 
 fn main() {
-    let world = ron::from_str::<World>(include_str!("../scenes/board.ron")).unwrap();
+    let world = ron::from_str::<World>(include_str!("../scenes/sample.ron")).unwrap();
     let mut camera = Camera {
         transform: Transform {
             position: -0.8 * Vec3::i(),
@@ -145,7 +145,7 @@ fn main() {
 fn queue_render(frame: &mut [u8], world: &World, camera: &Camera) {
     // Create a instant here to time how long it takes to render a frame
     let now = std::time::Instant::now();
-    
+
     // used to zip with frame data in place of enumerating (which cannot be done with par_chunks_exact_mut)
     let index = 0..(DIMS.0 * DIMS.1);
 
