@@ -132,7 +132,7 @@ fn main() {
                 .is_err()
             {
                 *control_flow = ControlFlow::Exit;
-                return;
+                
             }
         }
     });
@@ -154,7 +154,7 @@ fn queue_render(frame: &mut [u8], world: &World, camera: &Camera) {
             let x_w = x as f32 - (DIMS.0 as f32) / 2.0;
             let y_w = y as f32 - (DIMS.1 as f32) / 2.0;
 
-            let rgb: Color = camera.get_px(world, x_w.into(), y_w.into());
+            let rgb: Color = camera.get_px(world, x_w, y_w);
             let rgba: [u8; 4] = [rgb[0], rgb[1], rgb[2], 255];
 
             pixel.copy_from_slice(&rgba);
