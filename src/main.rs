@@ -1,26 +1,22 @@
 // Requires nightly, allows for constant implementations of traits, for Self::Default for storage and small perf improvements.
 #![feature(const_trait_impl)]
 
-// TODO: replace with `anyhow` crate
-#[macro_use]
-extern crate lazy_static;
-
-use crossterm::{
-    cursor,
-    event::{self, Event, KeyCode, KeyModifiers},
-    execute,
-    style::{self, Stylize},
-    terminal, QueueableCommand, Result,
-};
-use rayon::prelude::{IntoParallelIterator, ParallelIterator};
+use pixels::{Pixels, SurfaceTexture};
 use serde::Deserialize;
-use std::io::{stdout, Write};
+use winit::dpi::LogicalSize;
+use winit::event::{Event, VirtualKeyCode};
+use winit::event_loop::{ControlFlow, EventLoop};
+use winit::window::WindowBuilder;
+use winit_input_helper::WinitInputHelper;
 
-const DIMS: (u16, u16) = (225, 150);
+/// Dimentions of the Window (in pixels), width by height
+const DIMS: (u32, u32) = (400, 400);
+
+/// PI/32
 const PI_FRAC_32: f32 = 0.09817477;
 
-fn main() -> Result<()> {
-    let world = ron::from_str::<World>(include_str!("../scenes/sample.ron")).unwrap();
+fn main() {
+    let world = ron::from_str::<World>(include_str!("../scenes/board.ron")).unwrap();
     let mut camera = Camera {
         transform: Transform {
             position: -0.8 * Vec3::i(),
@@ -30,43 +26,60 @@ fn main() -> Result<()> {
         focal_length: 2.0,
     };
 
-    crossterm::terminal::enable_raw_mode()?;
+    let event_loop = EventLoop::new();
+    let mut input = WinitInputHelper::new();
+    let window = {
+        let size = LogicalSize::new(DIMS.0 as f64, DIMS.1 as f64);
+        WindowBuilder::new()
+            .with_title("Raytracing Test")
+            .with_inner_size(size)
+            .with_min_inner_size(size)
+            .with_decorations(false) // weird graphical issue happens without this (at least on gnome + wayland) further investigation needed
+            .build(&event_loop)
+            .unwrap()
+    };
 
-    let mut stdout = std::io::BufWriter::new(stdout());
+    let mut pixels = {
+        let window_size = window.inner_size();
+        let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
+        Pixels::new(DIMS.0, DIMS.1, surface_texture).expect("failed to create pixels")
+    };
 
-    execute!(stdout, cursor::Hide, terminal::EnterAlternateScreen)?;
+    queue_render(pixels.get_frame_mut(), &world, &camera);
 
-    queue_render(&mut stdout, &world, &camera)?;
-    stdout.flush()?;
-
-    while let Ok(event) = event::read() {
-        if let Event::Key(event) = event {
-            if event.modifiers == KeyModifiers::CONTROL && event.code == KeyCode::Char('c') {
-                break;
-            }
-
+    event_loop.run(move |event, _, control_flow| {
+        let keyboard_input: bool = if input.update(&event) {
             let mut movement = |delta: Vec3| {
                 camera.transform.position += delta.rotate(camera.transform.rotation);
             };
 
-            match event.code {
-                KeyCode::Char('w') => movement(0.1 * Vec3::i()),
-                KeyCode::Char('s') => movement(-0.1 * Vec3::i()),
-                KeyCode::Char('a') => movement(0.1 * Vec3::j()),
-                KeyCode::Char('d') => movement(-0.1 * Vec3::j()),
-                KeyCode::Char('e') => movement(0.1 * Vec3::k()),
-                KeyCode::Char('q') => movement(-0.1 * Vec3::k()),
-                KeyCode::Char('r') => camera.focal_length += 0.1,
-                KeyCode::Char('f') => camera.focal_length -= 0.1,
-                KeyCode::Char('x') => {
-                    movement(0.1 * Vec3::i());
-                    camera.focal_length -= 0.1;
-                }
-                KeyCode::Char('z') => {
-                    movement(-0.1 * Vec3::i());
-                    camera.focal_length += 0.1;
-                }
-                _ => (),
+            const MOVEMENT_MOD: f32 = 0.1;
+            let mut did_movement: bool = true;
+
+            if input.key_pressed(VirtualKeyCode::W) {
+                movement(MOVEMENT_MOD * Vec3::i());
+            } else if input.key_pressed(VirtualKeyCode::S) {
+                movement(-MOVEMENT_MOD * Vec3::i());
+            } else if input.key_pressed(VirtualKeyCode::A) {
+                movement(MOVEMENT_MOD * Vec3::j());
+            } else if input.key_pressed(VirtualKeyCode::D) {
+                movement(-MOVEMENT_MOD * Vec3::j());
+            } else if input.key_pressed(VirtualKeyCode::E) {
+                movement(MOVEMENT_MOD * Vec3::k());
+            } else if input.key_pressed(VirtualKeyCode::Q) {
+                movement(-MOVEMENT_MOD * Vec3::k());
+            } else if input.key_pressed(VirtualKeyCode::R) {
+                camera.focal_length += MOVEMENT_MOD;
+            } else if input.key_pressed(VirtualKeyCode::F) {
+                camera.focal_length -= MOVEMENT_MOD;
+            } else if input.key_pressed(VirtualKeyCode::X) {
+                movement(MOVEMENT_MOD * Vec3::i());
+                camera.focal_length -= MOVEMENT_MOD;
+            } else if input.key_pressed(VirtualKeyCode::Z) {
+                movement(-MOVEMENT_MOD * Vec3::i());
+                camera.focal_length += MOVEMENT_MOD;
+            } else {
+                did_movement = false;
             }
 
             let mut rotation = |angle: f32, axis: Vec3| {
@@ -75,65 +88,78 @@ fn main() -> Result<()> {
 
                 let rot = &mut camera.transform.rotation;
                 let new_rot = *rot * new_rot * rot.conj();
+
                 // Mathematically, the magnitude should always remain at 1 already, but floating point
                 // precision errors cause self-fueleing inaccuracy that becomes worse with each rotation.
                 let new_rot = new_rot * new_rot.mag().recip();
                 *rot = new_rot * *rot;
             };
 
-            match event.code {
-                KeyCode::Char('j') => rotation(PI_FRAC_32, Vec3::k()),
-                KeyCode::Char('l') => rotation(-PI_FRAC_32, Vec3::k()),
-                KeyCode::Char('k') => rotation(PI_FRAC_32, Vec3::j()),
-                KeyCode::Char('i') => rotation(-PI_FRAC_32, Vec3::j()),
-                KeyCode::Char('o') => rotation(PI_FRAC_32, Vec3::i()),
-                KeyCode::Char('u') => rotation(-PI_FRAC_32, Vec3::i()),
-                _ => (),
+            let mut rotated: bool = true;
+            if input.key_pressed(VirtualKeyCode::J) {
+                rotation(PI_FRAC_32, Vec3::k());
+            } else if input.key_pressed(VirtualKeyCode::L) {
+                rotation(-PI_FRAC_32, Vec3::k());
+            } else if input.key_pressed(VirtualKeyCode::K) {
+                rotation(PI_FRAC_32, Vec3::j());
+            } else if input.key_pressed(VirtualKeyCode::I) {
+                rotation(-PI_FRAC_32, Vec3::j());
+            } else if input.key_pressed(VirtualKeyCode::O) {
+                rotation(PI_FRAC_32, Vec3::i());
+            } else if input.key_pressed(VirtualKeyCode::O) {
+                rotation(-PI_FRAC_32, Vec3::i())
+            } else {
+                rotated = false;
             }
 
-            queue_render(&mut stdout, &world, &camera)?;
-            stdout.flush()?;
+            rotated || did_movement
+        } else {
+            false
+        };
+
+        // there is probably a way in the API to do this better but this was just very quick
+        let redraw_requested: bool = {
+            if let Event::RedrawRequested(_) = event {
+                true
+            } else {
+                false
+            }
+        };
+
+        // Draw the current frame
+        if keyboard_input || redraw_requested {
+            queue_render(pixels.get_frame_mut(), &world, &camera);
+            if pixels
+                .render()
+                .map_err(|e| panic!("pixels.render() failed: {}", e))
+                .is_err()
+            {
+                *control_flow = ControlFlow::Exit;
+                return;
+            }
         }
-    }
-
-    execute!(stdout, terminal::LeaveAlternateScreen, cursor::Show)?;
-
-    crossterm::terminal::disable_raw_mode()?;
-
-    Ok(())
+    });
 }
 
-lazy_static! {
-    pub static ref DATA: Vec<(u16, u16, f32, f32)> = {
-        let a = (DIMS.0 as f32) / 2.0;
-        let b = (DIMS.1 as f32) / 4.0;
-        (0..DIMS.1 / 2)
-            .flat_map(|y_hf| std::iter::repeat(y_hf).zip(0..DIMS.0))
-            .map(|(y_hf, x)| {
-                let x_fl = x as f32 - a;
-                let y_hf_fl = y_hf as f32 - b;
-                (y_hf, x, x_fl, y_hf_fl)
-            })
-            .collect::<Vec<(u16, u16, f32, f32)>>()
-    };
-    pub static ref DATA_LEN: usize = DATA.len();
-}
+fn queue_render(frame: &mut [u8], world: &World, camera: &Camera) {
+    // Create a instant here to time how long it takes to render a frame
+    let now = std::time::Instant::now();
+    for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
+        // (x,y) of pixel on screen
+        let (x, y): (i32, i32) = (
+            ((i % DIMS.0 as usize) as i32),
+            ((i / DIMS.0 as usize) as i32),
+        );
+        let x_w = x as f32 - (DIMS.0 as f32) / 2.0;
+        let y_w = y as f32 - (DIMS.1 as f32) / 4.0;
 
-fn queue_render(mut stdout: impl Write, world: &World, camera: &Camera) -> Result<()> {
-    let colors: Vec<(Color, Color)> = DATA
-        .clone()
-        .into_par_iter()
-        .map(|(_, _, x_fl, y_hf_fl)| camera.get_double_px(world, x_fl, y_hf_fl * 2.0))
-        .collect::<Vec<(Color, Color)>>();
+        let rgb: Color = camera.get_px(world, x_w.into(), y_w.into());
+        let rgba: [u8; 4] = [rgb[0], rgb[1], rgb[2], 255];
 
-    for (i, (y_hf, x, _, _)) in DATA.iter().enumerate() {
-        stdout
-            .queue(cursor::MoveTo(*x, *y_hf))?
-            .queue(style::PrintStyledContent(
-                "▀".with(colors[i].0.into()).on(colors[i].1.into()),
-            ))?;
+        pixel.copy_from_slice(&rgba);
     }
-    Ok(())
+    // TODO: add toggleable debug overlay
+    println!("Frame took: {}ms", now.elapsed().as_millis());
 }
 
 #[derive(Clone, Copy, PartialEq, Debug, Deserialize)]
@@ -298,7 +324,11 @@ impl Vec3 {
     }
 
     fn rotate(self, rot: Quat) -> Vec3 {
-        Vec3::from(rot * self * rot.conj())
+        if rot == Quat::default() {
+            self
+        } else {
+            Vec3::from(rot * self * rot.conj())
+        }
     }
 
     fn dot(self, rhs: Vec3) -> f32 {
@@ -441,7 +471,7 @@ impl std::ops::Mul<Quat> for f32 {
     }
 }
 
-impl From<Vec3> for Quat {
+impl const From<Vec3> for Quat {
     #[inline(always)]
     fn from(vec: Vec3) -> Quat {
         Quat {
@@ -505,16 +535,6 @@ impl std::ops::IndexMut<usize> for Color {
     }
 }
 
-impl From<Color> for style::Color {
-    fn from(color: Color) -> Self {
-        style::Color::Rgb {
-            r: color[0],
-            g: color[1],
-            b: color[2],
-        }
-    }
-}
-
 impl std::ops::Mul<f32> for Color {
     type Output = Color;
     fn mul(self, rhs: f32) -> Color {
@@ -542,11 +562,6 @@ struct Camera {
 }
 
 impl Camera {
-    /// Helper for get_px
-    fn get_double_px(&self, world: &World, x: f32, y: f32) -> (Color, Color) {
-        return (self.get_px(world, x, y), self.get_px(world, x, y + 1.0));
-    }
-
     fn get_px(&self, world: &World, x: f32, y: f32) -> Color {
         let ray = Vec3 {
             x: self.focal_length,
@@ -591,11 +606,15 @@ impl Camera {
         let [(a, d, g), (b, e, h), (c, f, i)] =
             [p1, p2, p3].map(|p| p - pos).map(|v| (v.x, v.y, v.z));
 
-        let det_neg =
-            (a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g)).is_sign_negative();
+        let ei = e * i;
+        let fh = f * h;
+        let fg = f * g;
+        let di = d * i;
+
+        let det_neg = (a * (ei - fh) + b * (fg - di) + c * (d * h - e * g)).is_sign_negative();
         if ![
-            ray.x * (e * i - f * h) + ray.y * (c * h - b * i) + ray.z * (b * f - c * e),
-            ray.x * (f * g - d * i) + ray.y * (a * i - c * g) + ray.z * (c * d - a * f),
+            ray.x * (ei - fh) + ray.y * (c * h - b * i) + ray.z * (b * f - c * e),
+            ray.x * (fg - di) + ray.y * (a * i - c * g) + ray.z * (c * d - a * f),
             ray.x * (d * h - e * g) + ray.y * (b * g - a * h) + ray.z * (a * e - b * d),
         ]
         .iter()
