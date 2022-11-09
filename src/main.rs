@@ -37,7 +37,7 @@ fn main() {
             .with_min_inner_size(size)
             .with_decorations(false) // weird graphical issue happens without this (at least on gnome + wayland) further investigation needed
             .build(&event_loop)
-            .unwrap()
+            .expect("WindowBuilder failed")
     };
 
     let mut pixels = {
