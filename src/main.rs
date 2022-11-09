@@ -11,7 +11,10 @@ use world::{Transform, World};
 
 use pixels::{Pixels, SurfaceTexture};
 use rayon::prelude::*;
-use std::time::{Duration, Instant};
+use std::{
+    collections::VecDeque,
+    time::{Duration, Instant},
+};
 use winit::{
     dpi::LogicalSize,
     event::{Event, VirtualKeyCode},
@@ -23,6 +26,9 @@ use winit_input_helper::WinitInputHelper;
 /// Dimentions of the Window (in pixels), width by height
 const DIMS: (u32, u32) = (400, 400);
 const HALF_DIMS: (f32, f32) = (DIMS.0 as f32 / 2.0, DIMS.1 as f32 / 2.0);
+
+/// Number of frames used to create average
+const N_FRAMES: u32 = 20;
 
 fn main() {
     let world = ron::from_str::<World>(include_str!("../scenes/sample.ron"))
@@ -60,13 +66,12 @@ fn main() {
         pixel[3] = 255u8;
     }
 
-    let mut avg_frametime: Duration = Duration::ZERO;
-    let mut n_frames: u32 = 0u32;
+    let mut frametime_log: VecDeque<Duration> = VecDeque::with_capacity(N_FRAMES as usize);
     queue_render(
         pixels.get_frame_mut(),
         &world,
         &camera,
-        Some((&mut avg_frametime, &mut n_frames)),
+        Some(&mut frametime_log),
     );
 
     let mut last_frame = std::time::Instant::now();
@@ -180,7 +185,7 @@ fn main() {
                 pixels.get_frame_mut(),
                 &world,
                 &camera,
-                Some((&mut avg_frametime, &mut n_frames)),
+                Some(&mut frametime_log),
             );
             if pixels
                 .render()
@@ -198,7 +203,7 @@ fn queue_render(
     frame: &mut [u8],
     world: &World,
     camera: &Camera,
-    frame_data: Option<(&mut Duration, &mut u32)>,
+    frame_data: Option<&mut VecDeque<Duration>>,
 ) {
     // Create a instant here to time how long it takes to render a frame
     let now = Instant::now();
@@ -221,12 +226,14 @@ fn queue_render(
 
     let took = now.elapsed();
 
-    if let Some((avg_frametime, n_frames)) = frame_data {
-        *n_frames += 1;
-        let avg_nanos = ((((*n_frames - 1) as f32) * (avg_frametime.as_nanos() as f32))
-            + took.as_nanos() as f32)
-            / (*n_frames as f32);
-        *avg_frametime = Duration::from_nanos(avg_nanos as u64);
+    if let Some(frametime_log) = frame_data {
+        let avg_frametime = frametime_log.iter().sum::<Duration>() / N_FRAMES;
+        println!("{:?}", frametime_log);
+        if frametime_log.len() == N_FRAMES as usize {
+            frametime_log.pop_back();
+        }
+
+        frametime_log.push_front(took);
         eprintln!("Frame took: {:#?} (avg: {:#?})", took, avg_frametime);
     } else {
         eprintln!("Frame took: {:#?}", took);
