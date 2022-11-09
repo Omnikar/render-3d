@@ -227,12 +227,13 @@ fn queue_render(
     let took = now.elapsed();
 
     if let Some(frametime_log) = frame_data {
-        let avg_frametime = frametime_log.iter().sum::<Duration>() / frametime_log.len() as u32;
         if frametime_log.len() == N_FRAMES as usize {
             frametime_log.pop_back();
         }
-
         frametime_log.push_front(took);
+
+        let avg_frametime = frametime_log.iter().sum::<Duration>() / frametime_log.len() as u32;
+
         eprintln!("Frame took: {:#?} (avg: {:#?})", took, avg_frametime);
     } else {
         eprintln!("Frame took: {:#?}", took);
