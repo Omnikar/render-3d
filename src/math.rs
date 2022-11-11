@@ -17,7 +17,7 @@ impl const Default for Vec3 {
     }
 }
 
-impl std::ops::Add for Vec3 {
+impl const std::ops::Add for Vec3 {
     type Output = Vec3;
     #[inline(always)]
     fn add(self, rhs: Vec3) -> Vec3 {
@@ -29,7 +29,7 @@ impl std::ops::Add for Vec3 {
     }
 }
 
-impl std::ops::Add<f32> for Vec3 {
+impl const std::ops::Add<f32> for Vec3 {
     type Output = Quat;
     #[inline(always)]
     fn add(self, rhs: f32) -> Quat {
@@ -37,7 +37,7 @@ impl std::ops::Add<f32> for Vec3 {
     }
 }
 
-impl std::ops::Add<Vec3> for f32 {
+impl const std::ops::Add<Vec3> for f32 {
     type Output = Quat;
     #[inline(always)]
     fn add(self, rhs: Vec3) -> Quat {
@@ -52,7 +52,7 @@ impl std::ops::AddAssign for Vec3 {
     }
 }
 
-impl std::ops::Sub for Vec3 {
+impl const std::ops::Sub for Vec3 {
     type Output = Vec3;
     #[inline(always)]
     fn sub(self, rhs: Vec3) -> Vec3 {
@@ -64,7 +64,7 @@ impl std::ops::Sub for Vec3 {
     }
 }
 
-impl std::ops::Neg for Vec3 {
+impl const std::ops::Neg for Vec3 {
     type Output = Vec3;
     #[inline(always)]
     fn neg(self) -> Vec3 {
@@ -76,7 +76,7 @@ impl std::ops::Neg for Vec3 {
     }
 }
 
-impl std::ops::Mul<Vec3> for f32 {
+impl const std::ops::Mul<Vec3> for f32 {
     type Output = Vec3;
     #[inline(always)]
     fn mul(self, rhs: Vec3) -> Vec3 {
@@ -88,7 +88,7 @@ impl std::ops::Mul<Vec3> for f32 {
     }
 }
 
-impl std::ops::Mul<f32> for Vec3 {
+impl const std::ops::Mul<f32> for Vec3 {
     type Output = Vec3;
     #[inline(always)]
     fn mul(self, rhs: f32) -> Vec3 {
@@ -96,7 +96,7 @@ impl std::ops::Mul<f32> for Vec3 {
     }
 }
 
-impl std::ops::Mul<Quat> for Vec3 {
+impl const std::ops::Mul<Quat> for Vec3 {
     type Output = Quat;
     #[inline(always)]
     fn mul(self, rhs: Quat) -> Quat {
@@ -104,7 +104,7 @@ impl std::ops::Mul<Quat> for Vec3 {
     }
 }
 
-impl std::ops::Div<f32> for Vec3 {
+impl const std::ops::Div<f32> for Vec3 {
     type Output = Vec3;
     #[inline(always)]
     fn div(self, rhs: f32) -> Vec3 {
@@ -174,12 +174,12 @@ impl Vec3 {
     }
 
     #[inline]
-    pub fn dot(self, rhs: Vec3) -> f32 {
+    pub const fn dot(self, rhs: Vec3) -> f32 {
         self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
     }
 
     #[inline]
-    pub fn cross(self, rhs: Vec3) -> Vec3 {
+    pub const fn cross(self, rhs: Vec3) -> Vec3 {
         Vec3::from(self * Quat::from(rhs))
     }
 }
@@ -203,7 +203,7 @@ impl const Default for Quat {
     }
 }
 
-impl std::ops::Add for Quat {
+impl const std::ops::Add for Quat {
     type Output = Quat;
     /// Adds two quats together
     /// ```
@@ -224,7 +224,7 @@ impl std::ops::Add for Quat {
     }
 }
 
-impl std::ops::Add<f32> for Quat {
+impl const std::ops::Add<f32> for Quat {
     type Output = Quat;
     #[inline(always)]
     fn add(self, rhs: f32) -> Quat {
@@ -232,7 +232,7 @@ impl std::ops::Add<f32> for Quat {
     }
 }
 
-impl std::ops::Add<Quat> for f32 {
+impl const std::ops::Add<Quat> for f32 {
     type Output = Quat;
     #[inline(always)]
     fn add(self, rhs: Quat) -> Quat {
@@ -240,7 +240,7 @@ impl std::ops::Add<Quat> for f32 {
     }
 }
 
-impl std::ops::Sub for Quat {
+impl const std::ops::Sub for Quat {
     type Output = Quat;
     #[inline(always)]
     fn sub(self, rhs: Quat) -> Quat {
@@ -253,7 +253,7 @@ impl std::ops::Sub for Quat {
     }
 }
 
-impl std::ops::Neg for Quat {
+impl const std::ops::Neg for Quat {
     type Output = Quat;
     #[inline(always)]
     fn neg(self) -> Quat {
@@ -266,7 +266,7 @@ impl std::ops::Neg for Quat {
     }
 }
 
-impl std::ops::Mul for Quat {
+impl const std::ops::Mul for Quat {
     type Output = Quat;
     #[inline(always)]
     fn mul(self, rhs: Quat) -> Quat {
@@ -279,7 +279,7 @@ impl std::ops::Mul for Quat {
     }
 }
 
-impl std::ops::Mul<f32> for Quat {
+impl const std::ops::Mul<f32> for Quat {
     type Output = Quat;
     #[inline(always)]
     fn mul(self, rhs: f32) -> Quat {
@@ -292,7 +292,7 @@ impl std::ops::Mul<f32> for Quat {
     }
 }
 
-impl std::ops::Mul<Vec3> for Quat {
+impl const std::ops::Mul<Vec3> for Quat {
     type Output = Quat;
     #[inline(always)]
     fn mul(self, rhs: Vec3) -> Quat {
@@ -307,7 +307,7 @@ impl std::ops::MulAssign<f32> for Quat {
     }
 }
 
-impl std::ops::Mul<Quat> for f32 {
+impl const std::ops::Mul<Quat> for f32 {
     type Output = Quat;
     #[inline(always)]
     fn mul(self, rhs: Quat) -> Quat {
@@ -350,8 +350,9 @@ impl Quat {
         hf_angle.cos() + axis * hf_angle.sin()
     }
 
-    pub fn conj(self) -> Quat {
+    pub const fn conj(self) -> Quat {
         Quat {
+
             r: self.r,
             i: -self.i,
             j: -self.j,
