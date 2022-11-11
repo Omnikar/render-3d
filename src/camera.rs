@@ -100,10 +100,11 @@ impl Camera {
             return None;
         }
 
-        let t = [(b + sqrt_term) / a, (b - sqrt_term) / a]
+        let t = [(b + sqrt_term), (b - sqrt_term)]
             .into_iter()
             .filter(|n| n.is_sign_positive())
-            .min_by(f32::total_cmp)?;
+            .min_by(f32::total_cmp)
+            .map(|n| n / a)?;
 
         let coord = self.transform.position + ray * t;
         let normal = (coord - center).normalize();
