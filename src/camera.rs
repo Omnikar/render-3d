@@ -44,11 +44,10 @@ impl Camera {
         light: Vec3,
         (p1, p2, p3, color): (Vec3, Vec3, Vec3, Color),
     ) -> Option<(Color, f32)> {
-        let pos = self.transform.position;
         // Check if within plane
         let v1 = p2 - p1;
         let v2 = p3 - p1;
-        let dist = pos - p1;
+        let dist = self.transform.position - p1;
         let cross = v1.cross(v2);
         let t = -cross.dot(dist) / cross.dot(ray);
 
@@ -57,8 +56,9 @@ impl Camera {
         }
 
         // Check if within tetrahedron
-        let [(a, d, g), (b, e, h), (c, f, i)] =
-            [p1, p2, p3].map(|p| p - pos).map(|v| (v.x, v.y, v.z));
+        let [(a, d, g), (b, e, h), (c, f, i)] = [p1, p2, p3]
+            .map(|p| p - self.transform.position)
+            .map(|v| (v.x, v.y, v.z));
 
         let ei_fh = e * i - f * h;
         let fg_di = f * g - d * i;
