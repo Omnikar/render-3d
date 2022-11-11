@@ -28,7 +28,7 @@ const DIMS: (u32, u32) = (400, 400);
 const HALF_DIMS: (f32, f32) = (DIMS.0 as f32 / 2.0, DIMS.1 as f32 / 2.0);
 
 /// Number of frames used to create average
-const N_FRAMES: u32 = 20;
+const N_FRAMES: usize = 20;
 
 fn main() {
     let world = ron::from_str::<World>(include_str!("../scenes/sample.ron"))
@@ -45,7 +45,7 @@ fn main() {
     let event_loop = EventLoop::new();
     let mut input = WinitInputHelper::new();
     let window = {
-        let size = LogicalSize::new(DIMS.0 as f64, DIMS.1 as f64);
+        let size = LogicalSize::new(DIMS.0, DIMS.1);
         WindowBuilder::new()
             .with_title("Raytracing Test")
             .with_inner_size(size)
@@ -66,7 +66,7 @@ fn main() {
         pixel[3] = 255u8;
     }
 
-    let mut frametime_log: VecDeque<Duration> = VecDeque::with_capacity(N_FRAMES as usize);
+    let mut frametime_log: VecDeque<Duration> = VecDeque::with_capacity(N_FRAMES);
     queue_render(
         pixels.get_frame_mut(),
         &world,
@@ -225,7 +225,8 @@ fn queue_render(
     let took = now.elapsed();
 
     if let Some(frametime_log) = frame_data {
-        if frametime_log.len() == N_FRAMES as usize {
+        // Only remove the last element if the queue is the desired size
+        if frametime_log.len() == N_FRAMES {
             frametime_log.pop_back();
         }
         frametime_log.push_front(took);
