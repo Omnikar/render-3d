@@ -215,12 +215,11 @@ fn queue_render(
         .zip(INDEX)
         .for_each(|(pixel, i)| {
             // (x, y) of pixel on screen
-            let (x, y): (i32, i32) = (((i % DIMS.0) as i32), ((i / DIMS.0) as i32));
+            let (x, y): (u32, u32) = ((i % DIMS.0), (i / DIMS.0));
 
             let x_w = x as f32 - HALF_DIMS.0;
             let y_w = y as f32 - HALF_DIMS.1;
-            let rgb: &[u8] = &camera.get_px(world, x_w, y_w).0;
-            (pixel[0], pixel[1], pixel[2]) = (rgb[0], rgb[1], rgb[2])
+            pixel[0..=2].copy_from_slice(&camera.get_px(world, x_w, y_w).0)
         });
 
     let took = now.elapsed();
