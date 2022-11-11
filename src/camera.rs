@@ -104,6 +104,7 @@ impl Camera {
             .into_iter()
             .filter(|n| n.is_sign_positive())
             .min_by(f32::total_cmp)
+            // `a` will  never be negative as `a` is the result of the `sq_mag` of a `Vec3`
             .map(|n| n / a)?;
 
         let coord = self.transform.position + ray * t;
