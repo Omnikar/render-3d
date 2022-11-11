@@ -1,6 +1,6 @@
 World(
-    spheres: [
-        (
+    objects: [
+        Sphere(
             Vec3(
                 x: 7.0,
                 y: 0.0,
@@ -9,7 +9,7 @@ World(
             1.0,
             Color((255, 0, 0)),
         ),
-        (
+        Sphere(
             Vec3(
                 x: 7.0,
                 y: 0.0,
@@ -18,7 +18,7 @@ World(
             1.0,
             Color((255, 0, 0)),
         ),
-        (
+        Sphere(
             Vec3(
                 x: 1.0,
                 y: -0.5,
@@ -27,7 +27,7 @@ World(
             0.2,
             Color((0, 0, 255)),
         ),
-        (
+        Sphere(
             Vec3(
                 x: 1.0,
                 y: 0.5,
@@ -36,7 +36,7 @@ World(
             0.2,
             Color((255, 255, 0)),
         ),
-        (
+        Sphere(
             Vec3(
                 x: 2.0,
                 y: -0.5,
@@ -45,7 +45,7 @@ World(
             0.2,
             Color((255, 255, 0)),
         ),
-        (
+        Sphere(
             Vec3(
                 x: 2.0,
                 y: 0.5,
@@ -54,7 +54,7 @@ World(
             0.2,
             Color((0, 0, 255)),
         ),
-        (
+        Sphere(
             Vec3(
                 x: 3.0,
                 y: -0.5,
@@ -63,7 +63,7 @@ World(
             0.2,
             Color((0, 0, 255)),
         ),
-        (
+        Sphere(
             Vec3(
                 x: 3.0,
                 y: 0.5,
@@ -72,7 +72,7 @@ World(
             0.2,
             Color((255, 255, 0)),
         ),
-        (
+        Sphere(
             Vec3(
                 x: 4.5,
                 y: -0.7,
@@ -81,7 +81,7 @@ World(
             0.4,
             Color((0, 255, 0)),
         ),
-        (
+        Sphere(
             Vec3(
                 x: 4.5,
                 y: 0.7,
@@ -91,7 +91,6 @@ World(
             Color((0, 255, 0)),
         ),
     ],
-    tris: [],
     light: Vec3(
         x: 2.0,
         y: 0.0,

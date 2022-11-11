@@ -1,6 +1,6 @@
 use crate::{
     math::Vec3,
-    world::{Color, Transform, World},
+    world::{Color, Object, Transform, World},
 };
 
 pub struct Camera {
@@ -18,18 +18,24 @@ impl Camera {
         }
         .rotate(self.transform.rotation);
 
-        let tris = world
-            .tris
+        world
+            .objects
             .iter()
-            .filter_map(|p| self.tri_raycast(ray, world.light, *p));
-        let spheres = world
-            .spheres
-            .iter()
-            .filter_map(|p| self.sphere_raycast(ray, world.light, *p));
-        tris.chain(spheres)
+            .filter_map(|p| self.raycast(ray, world.light, p))
             .min_by(|(_, a), (_, b)| a.total_cmp(b))
             .map(|(color, _)| color)
             .unwrap_or(Color([0; 3]))
+    }
+
+    fn raycast(&self, ray: Vec3, light: Vec3, p: &Object) -> Option<(Color, f32)> {
+        match p {
+            Object::Sphere(center, r, color) => {
+                self.sphere_raycast(ray, light, (*center, *r, *color))
+            }
+            Object::Triangle(p1, p2, p3, color) => {
+                self.tri_raycast(ray, light, (*p1, *p2, *p3, *color))
+            }
+        }
     }
 
     fn tri_raycast(
