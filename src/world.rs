@@ -17,7 +17,8 @@ pub enum Object {
 }
 
 impl Object {
-    /// Fetch
+    /// Fetch color of object
+    #[allow(dead_code)]
     pub fn get_color(&self) -> Color {
         match self {
             Self::Triangle(_, _, _, c) => *c,
