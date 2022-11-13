@@ -205,14 +205,6 @@ impl const Default for Quat {
 
 impl const std::ops::Add for Quat {
     type Output = Quat;
-    /// Adds two quats together
-    /// ```
-    /// let a: Quat = Quat { r: 0.0, i: 1.0, j: 0.0, k: 1.0};
-    /// let b: Quat = Quat { r: 1.0, i: 0.0, j: 1.0, k: 0.0};
-    /// let c: Quat = a + b;
-    /// let expected = Quat { r: 1.0, i: 1.0, j: 1.0, k: 1.0};
-    /// assert_eq!(c, expected);
-    /// ```
     #[inline(always)]
     fn add(self, rhs: Quat) -> Quat {
         Quat {
