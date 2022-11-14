@@ -128,6 +128,10 @@ impl const From<Quat> for Vec3 {
 }
 
 impl Vec3 {
+    pub const fn new(x: f32, y: f32, z: f32) -> Vec3 {
+        Vec3 { x, y, z }
+    }
+
     pub const fn i() -> Vec3 {
         Vec3 {
             x: 1.0,
@@ -330,6 +334,10 @@ impl const From<f32> for Quat {
 }
 
 impl Quat {
+    pub const fn new(r: f32, i: f32, j: f32, k: f32) -> Quat {
+        Quat { r, i, j, k }
+    }
+
     pub const fn one() -> Quat {
         Quat {
             r: 1.0,
@@ -344,6 +352,7 @@ impl Quat {
 
     pub const fn conj(self) -> Quat {
         Quat {
+
 
             r: self.r,
             i: -self.i,
@@ -360,5 +369,132 @@ impl Quat {
     #[inline]
     pub fn mag(self) -> f32 {
         self.sq_mag().sqrt()
+    }}
+
+#[cfg(test)]
+mod vec3_tests {
+    use super::*;
+
+    #[test]
+    fn new() {
+        let a = Vec3 {
+            x: 1.0,
+            y: 2.0,
+            z: 3.0,
+        };
+        let b = Vec3::new(1.0, 2.0, 3.0);
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn add_vec3() {
+        let a: Vec3 = Vec3::new(0.5, 0.5, 1.0);
+        let b: Vec3 = Vec3::new(1.5, 1.0, 2.0);
+        let c: Vec3 = a + b;
+        assert_eq!(c, Vec3::new(2.0, 1.5, 3.0));
+    }
+
+    #[test]
+    fn add_f32() {
+        let a: Vec3 = Vec3::new(1.0, 1.0, 2.0);
+        let b: f32 = 2.0;
+        let c = a + b;
+        assert_eq!(c, Quat::new(2.0, 1.0, 1.0, 2.0));
+    }
+
+    #[test]
+    fn subtract() {
+        let a: Vec3 = Vec3::new(1.0, 3.0, 1.0);
+        let b: Vec3 = Vec3::new(0.5, 1.2, 1.5);
+        let c: Vec3 = a - b;
+        assert_eq!(c, Vec3::new(0.5, 1.8, -0.5));
+    }
+
+    #[test]
+    fn neg() {
+        let a: Vec3 = Vec3::new(1.0, 2.0, 3.0);
+        let b = -a;
+        assert_eq!(b, Vec3::new(-1.0, -2.0, -3.0));
+    }
+
+    #[test]
+    fn mul_f32() {
+        let a: Vec3 = Vec3::new(1.0, 2.0, 3.0);
+        let b: f32 = 10.0;
+        let c: Vec3 = a * b;
+        assert_eq!(c, Vec3::new(10.0, 20.0, 30.0));
+    }
+
+    #[test]
+    fn mul_quat() {
+        let a: Vec3 = Vec3::new(1.0, 2.0, 3.0);
+        let b: Quat = Quat::new(1.0, 0.5, 2.0, 1.5);
+        let c: Quat = a * b;
+        assert_eq!(c, Quat::new(-9.0, -2.0, 2.0, 4.0));
+    }
+}
+
+#[cfg(test)]
+mod quat_tests {
+    use super::*;
+
+    #[test]
+    fn new() {
+        let a: Quat = Quat {
+            r: 1.0,
+            i: 2.0,
+            j: 3.0,
+            k: 4.0,
+        };
+        let b: Quat = Quat::new(1.0, 2.0, 3.0, 4.0);
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn add_quat() {
+        let a: Quat = Quat::new(1.0, 1.0, 1.0, 1.0);
+        let b: Quat = Quat::new(0.5, 1.0, 0.5, 1.0);
+        let c: Quat = a + b;
+        assert_eq!(c, Quat::new(1.5, 2.0, 1.5, 2.0));
+    }
+
+    #[test]
+    fn add_f32() {
+        let a: Quat = Quat::new(1.0, 0.5, 1.0, 2.0);
+        let b: f32 = 10.0;
+        let c: Quat = a + b;
+        assert_eq!(c, Quat::new(11.0, 0.5, 1.0, 2.0));
+    }
+
+    #[test]
+    fn sub() {
+        let a: Quat = Quat::new(1.0, 1.0, 1.0, 1.0);
+        let b: Quat = Quat::new(0.5, 1.0, 0.5, 1.0);
+        let c: Quat = a - b;
+        assert_eq!(c, Quat::new(0.5, 0.0, 0.5, 0.0));
+    }
+
+    #[test]
+    fn neg() {
+        let a: Quat = Quat::new(1.0, 1.0, 1.0, 1.0);
+        let b: Quat = -a;
+        assert_eq!(b, Quat::new(-1.0, -1.0, -1.0, -1.0));
+    }
+
+    #[test]
+    fn mul_quat() {
+        let a: Quat = Quat::new(1.0, 1.0, 1.0, 1.0);
+        let b: Quat = Quat::new(0.5, 1.0, 0.5, 1.0);
+        let c: Quat = a * b;
+        assert_eq!(c, Quat::new(-2.0, 2.0, 1.0, 1.0));
+    }
+
+    #[test]
+    fn mul_f32() {
+        let a: Quat = Quat::new(0.5, 1.0, 0.5, 1.0);
+        let b: f32 = 2.0;
+        // Only should multiply `r` (the first number)
+        let c: Quat = a * b;
+        assert_eq!(c, Quat::new(1.0, 2.0, 1.0, 2.0));
     }
 }
