@@ -1,6 +1,7 @@
 // Requires nightly, allows for constant implementations of traits, for Self::Default for storage and small perf improvements.
 #![feature(const_trait_impl)]
 #![feature(const_fn_floating_point_arithmetic)]
+#![feature(core_intrinsics)]
 
 mod camera;
 mod math;

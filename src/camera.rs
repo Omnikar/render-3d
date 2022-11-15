@@ -92,6 +92,11 @@ impl Camera {
     ) -> Option<(Color, f32)> {
         let dist = center - self.transform.position;
         let a = ray.sq_mag();
+        // `a` will always be positive, let LLVM know so this can be optimized
+        unsafe {
+            std::intrinsics::assume(a >= 0.0);
+        }
+
         let b = ray.dot(dist);
         let c = dist.sq_mag() - r.powi(2);
 
