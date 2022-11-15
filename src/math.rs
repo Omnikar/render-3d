@@ -155,7 +155,7 @@ impl Vec3 {
 
     #[inline]
     pub fn sq_mag(self) -> f32 {
-        self.x.powi(2) + self.y.powi(2) + self.z.powi(2)
+        self.dot(self)
     }
 
     #[inline]
@@ -363,7 +363,12 @@ impl Quat {
 
     #[inline]
     pub fn sq_mag(self) -> f32 {
-        self.r.powi(2) + self.i.powi(2) + self.j.powi(2) + self.k.powi(2)
+        self.dot(self)
+    }
+
+    #[inline]
+    pub fn dot(self, other: Quat) -> f32 {
+        self.r * other.r + self.i * other.i + self.j * other.j + self.k * other.k
     }
 
     #[inline]
@@ -432,6 +437,20 @@ mod vec3_tests {
         let c: Quat = a * b;
         assert_eq!(c, Quat::new(-9.0, -2.0, 2.0, 4.0));
     }
+
+    #[test]
+    fn sq_mag() {
+        let a: Vec3 = Vec3::new(1.0, 2.0, 3.0);
+        let b: f32 = a.sq_mag();
+        assert_eq!(b, 14.0);
+    }
+
+    #[test]
+    fn mag() {
+        let a: Vec3 = Vec3::new(1.0, 2.0, 3.0);
+        let b: f32 = a.mag();
+        assert_eq!(b, 14.0f32.sqrt());
+    }
 }
 
 #[cfg(test)]
@@ -496,5 +515,19 @@ mod quat_tests {
         // Only should multiply `r` (the first number)
         let c: Quat = a * b;
         assert_eq!(c, Quat::new(1.0, 2.0, 1.0, 2.0));
+    }
+
+    #[test]
+    fn sq_mag() {
+        let a: Quat = Quat::new(1.0, 2.0, 3.0, 4.0);
+        let b: f32 = a.sq_mag();
+        assert_eq!(b, 30.0);
+    }
+
+    #[test]
+    fn mag() {
+        let a: Quat = Quat::new(1.0, 2.0, 3.0, 4.0);
+        let b: f32 = a.mag();
+        assert_eq!(b, 30.0f32.sqrt());
     }
 }
