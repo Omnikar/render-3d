@@ -37,7 +37,7 @@ fn main() {
         .expect("failed to parse World file");
     let mut camera = Camera {
         transform: Transform {
-            position: -0.8 * Vec3::i(),
+            position: -0.8 * Vec3::I,
             rotation: Quat::one(),
         },
         px_per_unit: 60.0,
@@ -106,29 +106,29 @@ fn main() {
             };
 
             if input.key_held(VirtualKeyCode::W) {
-                movement(MOVE_SPEED * Vec3::i());
+                movement(MOVE_SPEED * Vec3::I);
             }
             if input.key_held(VirtualKeyCode::S) {
-                movement(-MOVE_SPEED * Vec3::i());
+                movement(-MOVE_SPEED * Vec3::I);
             }
             if input.key_held(VirtualKeyCode::A) {
-                movement(MOVE_SPEED * Vec3::j());
+                movement(MOVE_SPEED * Vec3::J);
             }
             if input.key_held(VirtualKeyCode::D) {
-                movement(-MOVE_SPEED * Vec3::j());
+                movement(-MOVE_SPEED * Vec3::J);
             }
             if input.key_held(VirtualKeyCode::E) {
-                movement(MOVE_SPEED * Vec3::k());
+                movement(MOVE_SPEED * Vec3::K);
             }
             if input.key_held(VirtualKeyCode::Q) {
-                movement(-MOVE_SPEED * Vec3::k());
+                movement(-MOVE_SPEED * Vec3::K);
             }
             if input.key_held(VirtualKeyCode::X) {
-                movement(MOVE_SPEED * Vec3::i());
+                movement(MOVE_SPEED * Vec3::I);
                 camera.focal_length -= MOVE_SPEED * delta_time;
             }
             if input.key_held(VirtualKeyCode::Z) {
-                movement(-MOVE_SPEED * Vec3::i());
+                movement(-MOVE_SPEED * Vec3::I);
                 camera.focal_length += MOVE_SPEED * delta_time;
             }
             if input.key_held(VirtualKeyCode::R) {
@@ -157,22 +157,22 @@ fn main() {
             };
 
             if input.key_held(VirtualKeyCode::J) {
-                rotation(TURN_SPEED, Vec3::k());
+                rotation(TURN_SPEED, Vec3::K);
             }
             if input.key_held(VirtualKeyCode::L) {
-                rotation(-TURN_SPEED, Vec3::k());
+                rotation(-TURN_SPEED, Vec3::K);
             }
             if input.key_held(VirtualKeyCode::K) {
-                rotation(TURN_SPEED, Vec3::j());
+                rotation(TURN_SPEED, Vec3::J);
             }
             if input.key_held(VirtualKeyCode::I) {
-                rotation(-TURN_SPEED, Vec3::j());
+                rotation(-TURN_SPEED, Vec3::J);
             }
             if input.key_held(VirtualKeyCode::O) {
-                rotation(TURN_SPEED, Vec3::i());
+                rotation(TURN_SPEED, Vec3::I);
             }
             if input.key_held(VirtualKeyCode::U) {
-                rotation(-TURN_SPEED, Vec3::i())
+                rotation(-TURN_SPEED, Vec3::I)
             }
 
             did_rotation || did_movement

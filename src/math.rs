@@ -132,26 +132,9 @@ impl Vec3 {
         Vec3 { x, y, z }
     }
 
-    pub const fn i() -> Vec3 {
-        Vec3 {
-            x: 1.0,
-            ..Vec3::default()
-        }
-    }
-
-    pub const fn j() -> Vec3 {
-        Vec3 {
-            y: 1.0,
-            ..Vec3::default()
-        }
-    }
-
-    pub const fn k() -> Vec3 {
-        Vec3 {
-            z: 1.0,
-            ..Vec3::default()
-        }
-    }
+    pub const I: Vec3 = Vec3::new(1.0, 0.0, 0.0);
+    pub const J: Vec3 = Vec3::new(0.0, 1.0, 0.0);
+    pub const K: Vec3 = Vec3::new(0.0, 0.0, 1.0);
 
     #[inline]
     pub fn sq_mag(self) -> f32 {
