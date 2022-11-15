@@ -153,7 +153,7 @@ impl Vec3 {
 
     #[inline]
     pub fn rotate(self, rot: Quat) -> Vec3 {
-        if rot == Quat::one() {
+        if rot == Quat::ONE {
             self
         } else {
             Vec3::from(rot * self * rot.conj())
@@ -321,12 +321,7 @@ impl Quat {
         Quat { r, i, j, k }
     }
 
-    pub const fn one() -> Quat {
-        Quat {
-            r: 1.0,
-            ..Quat::default()
-        }
-    }
+    pub const ONE: Quat = Quat::new(1.0, 0.0, 0.0, 0.0);
 
     pub fn rotation(axis: Vec3, angle: f32) -> Quat {
         let hf_angle = angle / 2.0;

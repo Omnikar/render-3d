@@ -38,7 +38,7 @@ fn main() {
     let mut camera = Camera {
         transform: Transform {
             position: -0.8 * Vec3::I,
-            rotation: Quat::one(),
+            rotation: Quat::ONE,
         },
         px_per_unit: 60.0,
         focal_length: 2.0,
