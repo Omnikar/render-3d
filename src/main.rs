@@ -216,6 +216,11 @@ fn queue_render(
         .par_chunks_exact_mut(4)
         .zip(INDEX)
         .for_each(|(pixel, i)| {
+            // Pixel size will always be 4, RGBA
+            unsafe {
+                std::intrinsics::assume(pixel.len() == 4);
+            }
+
             // (x, y) of pixel on screen
             let (x, y): (u32, u32) = ((i % DIMS.0), (i / DIMS.1));
 

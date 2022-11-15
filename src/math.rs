@@ -429,6 +429,14 @@ mod vec3_tests {
         let b: f32 = a.mag();
         assert_eq!(b, 14.0f32.sqrt());
     }
+
+    #[test]
+    fn rotate() {
+        let a: Vec3 = Vec3::new(1.0, 0.0, 0.0);
+        let b: Quat = Quat::new(3.0, 2.0, 1.0, 1.0);
+        let c: Vec3 = a.rotate(b);
+        assert_eq!(c, Vec3::new(11.0, 10.0, -2.0));
+    }
 }
 
 #[cfg(test)]
