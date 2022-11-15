@@ -28,12 +28,10 @@ impl Camera {
     }
 
     fn raycast(&self, ray: Vec3, light: Vec3, p: &Object) -> Option<(Color, f32)> {
-        match p {
-            Object::Sphere(center, r, color) => {
-                self.sphere_raycast(ray, light, (*center, *r, *color))
-            }
+        match *p {
+            Object::Sphere(center, r, color) => self.sphere_raycast(ray, light, (center, r, color)),
             Object::Triangle(p1, p2, p3, color) => {
-                self.tri_raycast(ray, light, (*p1, *p2, *p3, *color))
+                self.tri_raycast(ray, light, (p1, p2, p3, color))
             }
         }
     }
