@@ -341,12 +341,7 @@ impl Quat {
 
     #[inline]
     pub fn sq_mag(self) -> f32 {
-        self.dot(self)
-    }
-
-    #[inline]
-    pub fn dot(self, other: Quat) -> f32 {
-        self.r * other.r + self.i * other.i + self.j * other.j + self.k * other.k
+        self.r * self.r + self.i * self.i + self.j * self.j + self.k * self.k
     }
 
     #[inline]
