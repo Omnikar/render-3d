@@ -216,7 +216,7 @@ fn queue_render(
         .par_chunks_exact_mut(4)
         .zip(INDEX)
         .for_each(|(pixel, i)| {
-            // Pixel size will always be 4, RGBA
+            // SAFETY: Pixel size will always be 4, RGBA
             unsafe {
                 std::intrinsics::assume(pixel.len() == 4);
             }

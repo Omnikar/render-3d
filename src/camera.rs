@@ -21,14 +21,14 @@ impl Camera {
         world
             .objects
             .iter()
-            .filter_map(|p| self.raycast(ray, world.light, p))
+            .filter_map(|obj| self.raycast(ray, world.light, obj))
             .min_by(|(_, a), (_, b)| a.total_cmp(b))
             .map(|(color, _)| color)
             .unwrap_or(Color([0; 3]))
     }
 
-    fn raycast(&self, ray: Vec3, light: Vec3, p: &Object) -> Option<(Color, f32)> {
-        match *p {
+    fn raycast(&self, ray: Vec3, light: Vec3, obj: &Object) -> Option<(Color, f32)> {
+        match *obj {
             Object::Sphere(center, r, color) => self.sphere_raycast(ray, light, (center, r, color)),
             Object::Triangle(p1, p2, p3, color) => {
                 self.tri_raycast(ray, light, (p1, p2, p3, color))
@@ -90,7 +90,7 @@ impl Camera {
     ) -> Option<(Color, f32)> {
         let dist = center - self.transform.position;
         let a = ray.sq_mag();
-        // `a` will always be positive, let LLVM know so this can be optimized
+        // SAFETY: `a` will always be positive; we let LLVM know so this can be optimized.
         unsafe {
             std::intrinsics::assume(a >= 0.0);
         }
@@ -99,7 +99,7 @@ impl Camera {
         let c = dist.sq_mag() - r.powi(2);
 
         let sqrt_term_inner = b.powi(2) - a * c;
-        if (0.0 > sqrt_term_inner) || sqrt_term_inner.is_subnormal() {
+        if 0.0 > sqrt_term_inner || sqrt_term_inner.is_subnormal() {
             return None;
         }
 
@@ -109,7 +109,8 @@ impl Camera {
             .into_iter()
             .filter(|n| n.is_sign_positive())
             .min_by(f32::total_cmp)
-            // `a` will  never be negative as `a` is the result of the `sq_mag` of a `Vec3`
+            // `a` will never be negative as it is the result of the `sq_mag` of a `Vec3`.
+            // As such, dividing by `a` does not have a chance of flipping the signs of the rest of the `t` calculation.
             .map(|n| n / a)?;
 
         let coord = self.transform.position + ray * t;
