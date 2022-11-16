@@ -212,7 +212,7 @@ fn do_render(
             }
 
             // (x, y) of pixel on screen
-            let (x, y): (u32, u32) = ((i % DIMS.0), (i / DIMS.1));
+            let (x, y): (u32, u32) = (i % DIMS.0, i / DIMS.0);
 
             let x_w = x as f32 - HALF_DIMS.0;
             let y_w = y as f32 - HALF_DIMS.1;
