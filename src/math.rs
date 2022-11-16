@@ -330,8 +330,6 @@ impl Quat {
 
     pub const fn conj(self) -> Quat {
         Quat {
-
-
             r: self.r,
             i: -self.i,
             j: -self.j,
@@ -347,7 +345,8 @@ impl Quat {
     #[inline]
     pub fn mag(self) -> f32 {
         self.sq_mag().sqrt()
-    }}
+    }
+}
 
 #[cfg(test)]
 mod vec3_tests {
