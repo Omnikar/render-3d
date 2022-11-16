@@ -142,8 +142,7 @@ fn main() {
 
             let mut rotation = |angle: f32, axis: Vec3| {
                 let angle = angle * delta_time;
-                let hf_angle = angle / 2.0;
-                let new_rot = hf_angle.cos() + axis * hf_angle.sin();
+                let new_rot = Quat::rotation(axis, angle);
 
                 let rot = &mut camera.transform.rotation;
                 let new_rot = *rot * new_rot * rot.conj();

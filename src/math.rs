@@ -345,6 +345,11 @@ impl Quat {
         }
     }
 
+    pub fn rotation(axis: Vec3, angle: f32) -> Quat {
+        let hf_angle = angle / 2.0;
+        hf_angle.cos() + axis * hf_angle.sin()
+    }
+
     pub fn conj(self) -> Quat {
         Quat {
             r: self.r,
