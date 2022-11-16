@@ -98,12 +98,12 @@ impl Camera {
         let b = ray.dot(dist);
         let c = dist.sq_mag() - r.powi(2);
 
-        let sqrt_term_inner = b.powi(2) - a * c;
-        if 0.0 > sqrt_term_inner || sqrt_term_inner.is_subnormal() {
+        let discriminant = b.powi(2) - a * c;
+        if discriminant.is_sign_negative() || discriminant.is_subnormal() {
             return None;
         }
 
-        let sqrt_term = sqrt_term_inner.sqrt();
+        let sqrt_term = discriminant.sqrt();
 
         let t = [(b + sqrt_term), (b - sqrt_term)]
             .into_iter()
