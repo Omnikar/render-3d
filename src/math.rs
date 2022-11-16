@@ -410,7 +410,7 @@ mod vec3_tests {
         let v: Vec3 = Vec3::new(1.0, 1.0, 1.0);
         let rot: Quat = Quat::rotation(Vec3::K, std::f32::consts::FRAC_PI_2);
         let v_new: Vec3 = v.rotate(rot);
-        assert!((v_new - Vec3::new(-1.0, 1.0, 1.0)).sq_mag() < 1e-10);
+        assert!((v_new - Vec3::new(-1.0, 1.0, 1.0)).sq_mag() < f32::EPSILON);
     }
 }
 
