@@ -2,18 +2,14 @@ use serde::Deserialize;
 
 #[derive(Clone, Copy, PartialEq, Debug, Deserialize)]
 pub struct Vec3 {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
+    x: f32,
+    y: f32,
+    z: f32,
 }
 
 impl const Default for Vec3 {
     fn default() -> Vec3 {
-        Vec3 {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        }
+        Vec3::new(0.0, 0.0, 0.0)
     }
 }
 
@@ -21,11 +17,7 @@ impl const std::ops::Add for Vec3 {
     type Output = Vec3;
     #[inline(always)]
     fn add(self, rhs: Vec3) -> Vec3 {
-        Vec3 {
-            x: self.x + rhs.x,
-            y: self.y + rhs.y,
-            z: self.z + rhs.z,
-        }
+        Vec3::new(self.x() + rhs.x(), self.y() + rhs.y(), self.z() + rhs.z())
     }
 }
 
@@ -56,11 +48,7 @@ impl const std::ops::Sub for Vec3 {
     type Output = Vec3;
     #[inline(always)]
     fn sub(self, rhs: Vec3) -> Vec3 {
-        Vec3 {
-            x: self.x - rhs.x,
-            y: self.y - rhs.y,
-            z: self.z - rhs.z,
-        }
+        Vec3::new(self.x() - rhs.x(), self.y() - rhs.y(), self.z() - rhs.z())
     }
 }
 
@@ -68,11 +56,7 @@ impl const std::ops::Neg for Vec3 {
     type Output = Vec3;
     #[inline(always)]
     fn neg(self) -> Vec3 {
-        Vec3 {
-            x: -self.x,
-            y: -self.y,
-            z: -self.z,
-        }
+        Vec3::new(-self.x(), -self.y(), -self.z())
     }
 }
 
@@ -80,11 +64,7 @@ impl const std::ops::Mul<Vec3> for f32 {
     type Output = Vec3;
     #[inline(always)]
     fn mul(self, rhs: Vec3) -> Vec3 {
-        Vec3 {
-            x: self * rhs.x,
-            y: self * rhs.y,
-            z: self * rhs.z,
-        }
+        Vec3::new(self * rhs.x(), self * rhs.y(), self * rhs.z())
     }
 }
 
@@ -108,22 +88,14 @@ impl const std::ops::Div<f32> for Vec3 {
     type Output = Vec3;
     #[inline(always)]
     fn div(self, rhs: f32) -> Vec3 {
-        Vec3 {
-            x: self.x / rhs,
-            y: self.y / rhs,
-            z: self.z / rhs,
-        }
+        Vec3::new(self.x() / rhs, self.y() / rhs, self.z() / rhs)
     }
 }
 
 impl const From<Quat> for Vec3 {
     #[inline(always)]
     fn from(quat: Quat) -> Vec3 {
-        Vec3 {
-            x: quat.i,
-            y: quat.j,
-            z: quat.k,
-        }
+        Vec3::new(quat.i, quat.j, quat.k)
     }
 }
 
@@ -162,31 +134,41 @@ impl Vec3 {
 
     #[inline]
     pub const fn dot(self, rhs: Vec3) -> f32 {
-        self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
+        self.x() * rhs.x() + self.y() * rhs.y() + self.z() * rhs.z()
     }
 
     #[inline]
     pub const fn cross(self, rhs: Vec3) -> Vec3 {
         Vec3::from(self * Quat::from(rhs))
     }
+
+    #[inline]
+    pub const fn x(self) -> f32 {
+        self.x
+    }
+
+    #[inline]
+    pub const fn y(self) -> f32 {
+        self.y
+    }
+
+    #[inline]
+    pub const fn z(self) -> f32 {
+        self.z
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Quat {
-    pub r: f32,
-    pub i: f32,
-    pub j: f32,
-    pub k: f32,
+    r: f32,
+    i: f32,
+    j: f32,
+    k: f32,
 }
 
 impl const Default for Quat {
     fn default() -> Quat {
-        Quat {
-            r: 0.0,
-            i: 0.0,
-            j: 0.0,
-            k: 0.0,
-        }
+        Quat::new(0.0, 0.0, 0.0, 0.0)
     }
 }
 
@@ -194,12 +176,12 @@ impl const std::ops::Add for Quat {
     type Output = Quat;
     #[inline(always)]
     fn add(self, rhs: Quat) -> Quat {
-        Quat {
-            r: self.r + rhs.r,
-            i: self.i + rhs.i,
-            j: self.j + rhs.j,
-            k: self.k + rhs.k,
-        }
+        Quat::new(
+            self.r() + rhs.r(),
+            self.i() + rhs.i(),
+            self.j() + rhs.j(),
+            self.k() + rhs.k(),
+        )
     }
 }
 
@@ -223,12 +205,12 @@ impl const std::ops::Sub for Quat {
     type Output = Quat;
     #[inline(always)]
     fn sub(self, rhs: Quat) -> Quat {
-        Quat {
-            r: self.r - rhs.r,
-            i: self.i - rhs.i,
-            j: self.j - rhs.j,
-            k: self.k - rhs.k,
-        }
+        Quat::new(
+            self.r() - rhs.r(),
+            self.i() - rhs.i(),
+            self.j() - rhs.j(),
+            self.k() - rhs.k(),
+        )
     }
 }
 
@@ -236,12 +218,7 @@ impl const std::ops::Neg for Quat {
     type Output = Quat;
     #[inline(always)]
     fn neg(self) -> Quat {
-        Quat {
-            r: -self.r,
-            i: -self.i,
-            j: -self.j,
-            k: -self.k,
-        }
+        Quat::new(-self.r(), -self.i(), -self.j(), -self.k())
     }
 }
 
@@ -249,12 +226,12 @@ impl const std::ops::Mul for Quat {
     type Output = Quat;
     #[inline(always)]
     fn mul(self, rhs: Quat) -> Quat {
-        Quat {
-            r: self.r * rhs.r - self.i * rhs.i - self.j * rhs.j - self.k * rhs.k,
-            i: self.r * rhs.i + self.i * rhs.r + self.j * rhs.k - self.k * rhs.j,
-            j: self.r * rhs.j - self.i * rhs.k + self.j * rhs.r + self.k * rhs.i,
-            k: self.r * rhs.k + self.i * rhs.j - self.j * rhs.i + self.k * rhs.r,
-        }
+        Quat::new(
+            self.r() * rhs.r() - self.i() * rhs.i() - self.j() * rhs.j() - self.k() * rhs.k(),
+            self.r() * rhs.i() + self.i() * rhs.r() + self.j() * rhs.k() - self.k() * rhs.j(),
+            self.r() * rhs.j() - self.i() * rhs.k() + self.j() * rhs.r() + self.k() * rhs.i(),
+            self.r() * rhs.k() + self.i() * rhs.j() - self.j() * rhs.i() + self.k() * rhs.r(),
+        )
     }
 }
 
@@ -262,12 +239,12 @@ impl const std::ops::Mul<f32> for Quat {
     type Output = Quat;
     #[inline(always)]
     fn mul(self, rhs: f32) -> Quat {
-        Quat {
-            r: self.r * rhs,
-            i: self.i * rhs,
-            j: self.j * rhs,
-            k: self.k * rhs,
-        }
+        Quat::new(
+            self.r() * rhs,
+            self.i() * rhs,
+            self.j() * rhs,
+            self.k() * rhs,
+        )
     }
 }
 
@@ -297,22 +274,14 @@ impl const std::ops::Mul<Quat> for f32 {
 impl const From<Vec3> for Quat {
     #[inline(always)]
     fn from(vec: Vec3) -> Quat {
-        Quat {
-            r: 0.0,
-            i: vec.x,
-            j: vec.y,
-            k: vec.z,
-        }
+        Quat::new(0.0, vec.x(), vec.y(), vec.z())
     }
 }
 
 impl const From<f32> for Quat {
     #[inline(always)]
     fn from(r: f32) -> Quat {
-        Quat {
-            r,
-            ..Quat::default()
-        }
+        Quat::new(r, 0.0, 0.0, 0.0)
     }
 }
 
@@ -329,22 +298,37 @@ impl Quat {
     }
 
     pub const fn conj(self) -> Quat {
-        Quat {
-            r: self.r,
-            i: -self.i,
-            j: -self.j,
-            k: -self.k,
-        }
+        Quat::new(self.r(), -self.i(), -self.j(), -self.k())
     }
 
     #[inline]
     pub const fn sq_mag(self) -> f32 {
-        self.r * self.r + self.i * self.i + self.j * self.j + self.k * self.k
+        self.r() * self.r() + self.i() * self.i() + self.j() * self.j() + self.k() * self.k()
     }
 
     #[inline]
     pub fn mag(self) -> f32 {
         self.sq_mag().sqrt()
+    }
+
+    #[inline]
+    pub const fn r(self) -> f32 {
+        self.r
+    }
+
+    #[inline]
+    pub const fn i(self) -> f32 {
+        self.i
+    }
+
+    #[inline]
+    pub const fn j(self) -> f32 {
+        self.j
+    }
+
+    #[inline]
+    pub const fn k(self) -> f32 {
+        self.k
     }
 }
 
@@ -354,13 +338,10 @@ mod vec3_tests {
 
     #[test]
     fn new() {
-        let a = Vec3 {
-            x: 1.0,
-            y: 2.0,
-            z: 3.0,
-        };
-        let b = Vec3::new(1.0, 2.0, 3.0);
-        assert_eq!(a, b);
+        let a = Vec3::new(1.0, 2.0, 3.0);
+        assert_eq!(a.x(), 1.0);
+        assert_eq!(a.y(), 2.0);
+        assert_eq!(a.z(), 3.0);
     }
 
     #[test]
@@ -439,14 +420,11 @@ mod quat_tests {
 
     #[test]
     fn new() {
-        let a: Quat = Quat {
-            r: 1.0,
-            i: 2.0,
-            j: 3.0,
-            k: 4.0,
-        };
-        let b: Quat = Quat::new(1.0, 2.0, 3.0, 4.0);
-        assert_eq!(a, b);
+        let a: Quat = Quat::new(1.0, 2.0, 3.0, 4.0);
+        assert_eq!(a.r(), 1.0);
+        assert_eq!(a.i(), 2.0);
+        assert_eq!(a.j(), 3.0);
+        assert_eq!(a.k(), 4.0);
     }
 
     #[test]
