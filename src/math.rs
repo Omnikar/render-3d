@@ -426,10 +426,10 @@ mod vec3_tests {
 
     #[test]
     fn rotate() {
-        let a: Vec3 = Vec3::new(1.0, 0.0, 0.0);
-        let b: Quat = Quat::new(3.0, 2.0, 1.0, 1.0);
-        let c: Vec3 = a.rotate(b);
-        assert_eq!(c, Vec3::new(11.0, 10.0, -2.0));
+        let v: Vec3 = Vec3::new(1.0, 1.0, 1.0);
+        let rot: Quat = Quat::rotation(Vec3::K, std::f32::consts::FRAC_PI_2);
+        let v_new: Vec3 = v.rotate(rot);
+        assert!((v_new - Vec3::new(-1.0, 1.0, 1.0)).sq_mag() < 1e-10);
     }
 }
 
@@ -492,7 +492,6 @@ mod quat_tests {
     fn mul_f32() {
         let a: Quat = Quat::new(0.5, 1.0, 0.5, 1.0);
         let b: f32 = 2.0;
-        // Only should multiply `r` (the first number)
         let c: Quat = a * b;
         assert_eq!(c, Quat::new(1.0, 2.0, 1.0, 2.0));
     }
