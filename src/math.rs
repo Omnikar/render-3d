@@ -137,7 +137,7 @@ impl Vec3 {
     pub const K: Vec3 = Vec3::new(0.0, 0.0, 1.0);
 
     #[inline]
-    pub fn sq_mag(self) -> f32 {
+    pub const fn sq_mag(self) -> f32 {
         self.dot(self)
     }
 
@@ -338,7 +338,7 @@ impl Quat {
     }
 
     #[inline]
-    pub fn sq_mag(self) -> f32 {
+    pub const fn sq_mag(self) -> f32 {
         self.r * self.r + self.i * self.i + self.j * self.j + self.k * self.k
     }
 
