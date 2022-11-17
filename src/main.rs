@@ -69,12 +69,6 @@ fn main() {
     pixels.get_frame_mut().fill(0xff);
 
     let mut frametime_log: VecDeque<Duration> = VecDeque::with_capacity(N_FRAMES);
-    do_render(
-        pixels.get_frame_mut(),
-        &world,
-        &camera,
-        Some(&mut frametime_log),
-    );
 
     event_loop.run(move |event, _, control_flow| {
         let keyboard_input: bool = input.update(&event) && {
