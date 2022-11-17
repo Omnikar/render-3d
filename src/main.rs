@@ -66,9 +66,7 @@ fn main() {
             .expect("failed to create pixels")
     };
     // Fill alpha channel to avoid setting it later
-    for pixel in pixels.get_frame_mut().chunks_exact_mut(4) {
-        pixel[3] = 255u8;
-    }
+    pixels.get_frame_mut().fill(0xff);
 
     let mut frametime_log: VecDeque<Duration> = VecDeque::with_capacity(N_FRAMES);
     do_render(
