@@ -9,27 +9,19 @@ pub struct Vec3 {
 
 impl const Default for Vec3 {
     fn default() -> Vec3 {
-        Vec3 {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        }
+        Vec3::new(0.0, 0.0, 0.0)
     }
 }
 
-impl std::ops::Add for Vec3 {
+impl const std::ops::Add for Vec3 {
     type Output = Vec3;
     #[inline(always)]
     fn add(self, rhs: Vec3) -> Vec3 {
-        Vec3 {
-            x: self.x + rhs.x,
-            y: self.y + rhs.y,
-            z: self.z + rhs.z,
-        }
+        Vec3::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
     }
 }
 
-impl std::ops::Add<f32> for Vec3 {
+impl const std::ops::Add<f32> for Vec3 {
     type Output = Quat;
     #[inline(always)]
     fn add(self, rhs: f32) -> Quat {
@@ -37,7 +29,7 @@ impl std::ops::Add<f32> for Vec3 {
     }
 }
 
-impl std::ops::Add<Vec3> for f32 {
+impl const std::ops::Add<Vec3> for f32 {
     type Output = Quat;
     #[inline(always)]
     fn add(self, rhs: Vec3) -> Quat {
@@ -52,43 +44,31 @@ impl std::ops::AddAssign for Vec3 {
     }
 }
 
-impl std::ops::Sub for Vec3 {
+impl const std::ops::Sub for Vec3 {
     type Output = Vec3;
     #[inline(always)]
     fn sub(self, rhs: Vec3) -> Vec3 {
-        Vec3 {
-            x: self.x - rhs.x,
-            y: self.y - rhs.y,
-            z: self.z - rhs.z,
-        }
+        Vec3::new(self.x - rhs.x, self.y - rhs.y, self.z - rhs.z)
     }
 }
 
-impl std::ops::Neg for Vec3 {
+impl const std::ops::Neg for Vec3 {
     type Output = Vec3;
     #[inline(always)]
     fn neg(self) -> Vec3 {
-        Vec3 {
-            x: -self.x,
-            y: -self.y,
-            z: -self.z,
-        }
+        Vec3::new(-self.x, -self.y, -self.z)
     }
 }
 
-impl std::ops::Mul<Vec3> for f32 {
+impl const std::ops::Mul<Vec3> for f32 {
     type Output = Vec3;
     #[inline(always)]
     fn mul(self, rhs: Vec3) -> Vec3 {
-        Vec3 {
-            x: self * rhs.x,
-            y: self * rhs.y,
-            z: self * rhs.z,
-        }
+        Vec3::new(self * rhs.x, self * rhs.y, self * rhs.z)
     }
 }
 
-impl std::ops::Mul<f32> for Vec3 {
+impl const std::ops::Mul<f32> for Vec3 {
     type Output = Vec3;
     #[inline(always)]
     fn mul(self, rhs: f32) -> Vec3 {
@@ -96,7 +76,7 @@ impl std::ops::Mul<f32> for Vec3 {
     }
 }
 
-impl std::ops::Mul<Quat> for Vec3 {
+impl const std::ops::Mul<Quat> for Vec3 {
     type Output = Quat;
     #[inline(always)]
     fn mul(self, rhs: Quat) -> Quat {
@@ -104,54 +84,33 @@ impl std::ops::Mul<Quat> for Vec3 {
     }
 }
 
-impl std::ops::Div<f32> for Vec3 {
+impl const std::ops::Div<f32> for Vec3 {
     type Output = Vec3;
     #[inline(always)]
     fn div(self, rhs: f32) -> Vec3 {
-        Vec3 {
-            x: self.x / rhs,
-            y: self.y / rhs,
-            z: self.z / rhs,
-        }
+        Vec3::new(self.x / rhs, self.y / rhs, self.z / rhs)
     }
 }
 
 impl const From<Quat> for Vec3 {
     #[inline(always)]
     fn from(quat: Quat) -> Vec3 {
-        Vec3 {
-            x: quat.i,
-            y: quat.j,
-            z: quat.k,
-        }
+        Vec3::new(quat.i, quat.j, quat.k)
     }
 }
 
 impl Vec3 {
-    pub const fn i() -> Vec3 {
-        Vec3 {
-            x: 1.0,
-            ..Vec3::default()
-        }
+    pub const fn new(x: f32, y: f32, z: f32) -> Vec3 {
+        Vec3 { x, y, z }
     }
 
-    pub const fn j() -> Vec3 {
-        Vec3 {
-            y: 1.0,
-            ..Vec3::default()
-        }
-    }
-
-    pub const fn k() -> Vec3 {
-        Vec3 {
-            z: 1.0,
-            ..Vec3::default()
-        }
-    }
+    pub const I: Vec3 = Vec3::new(1.0, 0.0, 0.0);
+    pub const J: Vec3 = Vec3::new(0.0, 1.0, 0.0);
+    pub const K: Vec3 = Vec3::new(0.0, 0.0, 1.0);
 
     #[inline]
-    pub fn sq_mag(self) -> f32 {
-        self.x.powi(2) + self.y.powi(2) + self.z.powi(2)
+    pub const fn sq_mag(self) -> f32 {
+        self.dot(self)
     }
 
     #[inline]
@@ -166,7 +125,7 @@ impl Vec3 {
 
     #[inline]
     pub fn rotate(self, rot: Quat) -> Vec3 {
-        if rot == Quat::one() {
+        if rot == Quat::ONE {
             self
         } else {
             Vec3::from(rot * self * rot.conj())
@@ -174,12 +133,12 @@ impl Vec3 {
     }
 
     #[inline]
-    pub fn dot(self, rhs: Vec3) -> f32 {
+    pub const fn dot(self, rhs: Vec3) -> f32 {
         self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
     }
 
     #[inline]
-    pub fn cross(self, rhs: Vec3) -> Vec3 {
+    pub const fn cross(self, rhs: Vec3) -> Vec3 {
         Vec3::from(self * Quat::from(rhs))
     }
 }
@@ -194,37 +153,24 @@ pub struct Quat {
 
 impl const Default for Quat {
     fn default() -> Quat {
-        Quat {
-            r: 0.0,
-            i: 0.0,
-            j: 0.0,
-            k: 0.0,
-        }
+        Quat::new(0.0, 0.0, 0.0, 0.0)
     }
 }
 
-impl std::ops::Add for Quat {
+impl const std::ops::Add for Quat {
     type Output = Quat;
-    /// Adds two quats together
-    /// ```
-    /// let a: Quat = Quat { r: 0.0, i: 1.0, j: 0.0, k: 1.0};
-    /// let b: Quat = Quat { r: 1.0, i: 0.0, j: 1.0, k: 0.0};
-    /// let c: Quat = a + b;
-    /// let expected = Quat { r: 1.0, i: 1.0, j: 1.0, k: 1.0};
-    /// assert_eq!(c, expected);
-    /// ```
     #[inline(always)]
     fn add(self, rhs: Quat) -> Quat {
-        Quat {
-            r: self.r + rhs.r,
-            i: self.i + rhs.i,
-            j: self.j + rhs.j,
-            k: self.k + rhs.k,
-        }
+        Quat::new(
+            self.r + rhs.r,
+            self.i + rhs.i,
+            self.j + rhs.j,
+            self.k + rhs.k,
+        )
     }
 }
 
-impl std::ops::Add<f32> for Quat {
+impl const std::ops::Add<f32> for Quat {
     type Output = Quat;
     #[inline(always)]
     fn add(self, rhs: f32) -> Quat {
@@ -232,7 +178,7 @@ impl std::ops::Add<f32> for Quat {
     }
 }
 
-impl std::ops::Add<Quat> for f32 {
+impl const std::ops::Add<Quat> for f32 {
     type Output = Quat;
     #[inline(always)]
     fn add(self, rhs: Quat) -> Quat {
@@ -240,59 +186,49 @@ impl std::ops::Add<Quat> for f32 {
     }
 }
 
-impl std::ops::Sub for Quat {
+impl const std::ops::Sub for Quat {
     type Output = Quat;
     #[inline(always)]
     fn sub(self, rhs: Quat) -> Quat {
-        Quat {
-            r: self.r - rhs.r,
-            i: self.i - rhs.i,
-            j: self.j - rhs.j,
-            k: self.k - rhs.k,
-        }
+        Quat::new(
+            self.r - rhs.r,
+            self.i - rhs.i,
+            self.j - rhs.j,
+            self.k - rhs.k,
+        )
     }
 }
 
-impl std::ops::Neg for Quat {
+impl const std::ops::Neg for Quat {
     type Output = Quat;
     #[inline(always)]
     fn neg(self) -> Quat {
-        Quat {
-            r: -self.r,
-            i: -self.i,
-            j: -self.j,
-            k: -self.k,
-        }
+        Quat::new(-self.r, -self.i, -self.j, -self.k)
     }
 }
 
-impl std::ops::Mul for Quat {
+impl const std::ops::Mul for Quat {
     type Output = Quat;
     #[inline(always)]
     fn mul(self, rhs: Quat) -> Quat {
-        Quat {
-            r: self.r * rhs.r - self.i * rhs.i - self.j * rhs.j - self.k * rhs.k,
-            i: self.r * rhs.i + self.i * rhs.r + self.j * rhs.k - self.k * rhs.j,
-            j: self.r * rhs.j - self.i * rhs.k + self.j * rhs.r + self.k * rhs.i,
-            k: self.r * rhs.k + self.i * rhs.j - self.j * rhs.i + self.k * rhs.r,
-        }
+        Quat::new(
+            self.r * rhs.r - self.i * rhs.i - self.j * rhs.j - self.k * rhs.k,
+            self.r * rhs.i + self.i * rhs.r + self.j * rhs.k - self.k * rhs.j,
+            self.r * rhs.j - self.i * rhs.k + self.j * rhs.r + self.k * rhs.i,
+            self.r * rhs.k + self.i * rhs.j - self.j * rhs.i + self.k * rhs.r,
+        )
     }
 }
 
-impl std::ops::Mul<f32> for Quat {
+impl const std::ops::Mul<f32> for Quat {
     type Output = Quat;
     #[inline(always)]
     fn mul(self, rhs: f32) -> Quat {
-        Quat {
-            r: self.r * rhs,
-            i: self.i * rhs,
-            j: self.j * rhs,
-            k: self.k * rhs,
-        }
+        Quat::new(self.r * rhs, self.i * rhs, self.j * rhs, self.k * rhs)
     }
 }
 
-impl std::ops::Mul<Vec3> for Quat {
+impl const std::ops::Mul<Vec3> for Quat {
     type Output = Quat;
     #[inline(always)]
     fn mul(self, rhs: Vec3) -> Quat {
@@ -307,7 +243,7 @@ impl std::ops::MulAssign<f32> for Quat {
     }
 }
 
-impl std::ops::Mul<Quat> for f32 {
+impl const std::ops::Mul<Quat> for f32 {
     type Output = Quat;
     #[inline(always)]
     fn mul(self, rhs: Quat) -> Quat {
@@ -318,54 +254,197 @@ impl std::ops::Mul<Quat> for f32 {
 impl const From<Vec3> for Quat {
     #[inline(always)]
     fn from(vec: Vec3) -> Quat {
-        Quat {
-            r: 0.0,
-            i: vec.x,
-            j: vec.y,
-            k: vec.z,
-        }
+        Quat::new(0.0, vec.x, vec.y, vec.z)
     }
 }
 
 impl const From<f32> for Quat {
     #[inline(always)]
     fn from(r: f32) -> Quat {
-        Quat {
-            r,
-            ..Quat::default()
-        }
+        Quat::new(r, 0.0, 0.0, 0.0)
     }
 }
 
 impl Quat {
-    pub const fn one() -> Quat {
-        Quat {
-            r: 1.0,
-            ..Quat::default()
-        }
+    pub const fn new(r: f32, i: f32, j: f32, k: f32) -> Quat {
+        Quat { r, i, j, k }
     }
+
+    pub const ONE: Quat = Quat::new(1.0, 0.0, 0.0, 0.0);
 
     pub fn rotation(axis: Vec3, angle: f32) -> Quat {
         let hf_angle = angle / 2.0;
         hf_angle.cos() + axis * hf_angle.sin()
     }
 
-    pub fn conj(self) -> Quat {
-        Quat {
-            r: self.r,
-            i: -self.i,
-            j: -self.j,
-            k: -self.k,
-        }
+    pub const fn conj(self) -> Quat {
+        Quat::new(self.r, -self.i, -self.j, -self.k)
     }
 
     #[inline]
-    pub fn sq_mag(self) -> f32 {
-        self.r.powi(2) + self.i.powi(2) + self.j.powi(2) + self.k.powi(2)
+    pub const fn sq_mag(self) -> f32 {
+        self.r * self.r + self.i * self.i + self.j * self.j + self.k * self.k
     }
 
     #[inline]
     pub fn mag(self) -> f32 {
         self.sq_mag().sqrt()
+    }
+}
+
+#[cfg(test)]
+mod vec3_tests {
+    use super::*;
+
+    #[test]
+    fn new() {
+        let a = Vec3::new(1.0, 2.0, 3.0);
+        assert_eq!(a.x, 1.0);
+        assert_eq!(a.y, 2.0);
+        assert_eq!(a.z, 3.0);
+    }
+
+    #[test]
+    fn add_vec3() {
+        let a: Vec3 = Vec3::new(0.5, 0.5, 1.0);
+        let b: Vec3 = Vec3::new(1.5, 1.0, 2.0);
+        let c: Vec3 = a + b;
+        assert_eq!(c, Vec3::new(2.0, 1.5, 3.0));
+    }
+
+    #[test]
+    fn add_f32() {
+        let a: Vec3 = Vec3::new(1.0, 1.0, 2.0);
+        let b: f32 = 2.0;
+        let c = a + b;
+        assert_eq!(c, Quat::new(2.0, 1.0, 1.0, 2.0));
+    }
+
+    #[test]
+    fn subtract() {
+        let a: Vec3 = Vec3::new(1.0, 3.0, 1.0);
+        let b: Vec3 = Vec3::new(0.5, 1.2, 1.5);
+        let c: Vec3 = a - b;
+        assert_eq!(c, Vec3::new(0.5, 1.8, -0.5));
+    }
+
+    #[test]
+    fn neg() {
+        let a: Vec3 = Vec3::new(1.0, 2.0, 3.0);
+        let b = -a;
+        assert_eq!(b, Vec3::new(-1.0, -2.0, -3.0));
+    }
+
+    #[test]
+    fn mul_f32() {
+        let a: Vec3 = Vec3::new(1.0, 2.0, 3.0);
+        let b: f32 = 10.0;
+        let c: Vec3 = a * b;
+        assert_eq!(c, Vec3::new(10.0, 20.0, 30.0));
+    }
+
+    #[test]
+    fn mul_quat() {
+        let a: Vec3 = Vec3::new(1.0, 2.0, 3.0);
+        let b: Quat = Quat::new(1.0, 0.5, 2.0, 1.5);
+        let c: Quat = a * b;
+        assert_eq!(c, Quat::new(-9.0, -2.0, 2.0, 4.0));
+    }
+
+    #[test]
+    fn sq_mag() {
+        let a: Vec3 = Vec3::new(1.0, 2.0, 3.0);
+        let b: f32 = a.sq_mag();
+        assert_eq!(b, 14.0);
+    }
+
+    #[test]
+    fn mag() {
+        let a: Vec3 = Vec3::new(1.0, 2.0, 3.0);
+        let b: f32 = a.mag();
+        assert_eq!(b, 14.0f32.sqrt());
+    }
+
+    #[test]
+    fn rotate() {
+        let v: Vec3 = Vec3::new(1.0, 1.0, 1.0);
+        let rot: Quat = Quat::rotation(Vec3::K, std::f32::consts::FRAC_PI_2);
+        let v_new: Vec3 = v.rotate(rot);
+        assert!((v_new - Vec3::new(-1.0, 1.0, 1.0)).sq_mag() < f32::EPSILON);
+    }
+}
+
+#[cfg(test)]
+mod quat_tests {
+    use super::*;
+
+    #[test]
+    fn new() {
+        let a: Quat = Quat::new(1.0, 2.0, 3.0, 4.0);
+        assert_eq!(a.r, 1.0);
+        assert_eq!(a.i, 2.0);
+        assert_eq!(a.j, 3.0);
+        assert_eq!(a.k, 4.0);
+    }
+
+    #[test]
+    fn add_quat() {
+        let a: Quat = Quat::new(1.0, 1.0, 1.0, 1.0);
+        let b: Quat = Quat::new(0.5, 1.0, 0.5, 1.0);
+        let c: Quat = a + b;
+        assert_eq!(c, Quat::new(1.5, 2.0, 1.5, 2.0));
+    }
+
+    #[test]
+    fn add_f32() {
+        let a: Quat = Quat::new(1.0, 0.5, 1.0, 2.0);
+        let b: f32 = 10.0;
+        let c: Quat = a + b;
+        assert_eq!(c, Quat::new(11.0, 0.5, 1.0, 2.0));
+    }
+
+    #[test]
+    fn sub() {
+        let a: Quat = Quat::new(1.0, 1.0, 1.0, 1.0);
+        let b: Quat = Quat::new(0.5, 1.0, 0.5, 1.0);
+        let c: Quat = a - b;
+        assert_eq!(c, Quat::new(0.5, 0.0, 0.5, 0.0));
+    }
+
+    #[test]
+    fn neg() {
+        let a: Quat = Quat::new(1.0, 1.0, 1.0, 1.0);
+        let b: Quat = -a;
+        assert_eq!(b, Quat::new(-1.0, -1.0, -1.0, -1.0));
+    }
+
+    #[test]
+    fn mul_quat() {
+        let a: Quat = Quat::new(1.0, 1.0, 1.0, 1.0);
+        let b: Quat = Quat::new(0.5, 1.0, 0.5, 1.0);
+        let c: Quat = a * b;
+        assert_eq!(c, Quat::new(-2.0, 2.0, 1.0, 1.0));
+    }
+
+    #[test]
+    fn mul_f32() {
+        let a: Quat = Quat::new(0.5, 1.0, 0.5, 1.0);
+        let b: f32 = 2.0;
+        let c: Quat = a * b;
+        assert_eq!(c, Quat::new(1.0, 2.0, 1.0, 2.0));
+    }
+
+    #[test]
+    fn sq_mag() {
+        let a: Quat = Quat::new(1.0, 2.0, 3.0, 4.0);
+        let b: f32 = a.sq_mag();
+        assert_eq!(b, 30.0);
+    }
+
+    #[test]
+    fn mag() {
+        let a: Quat = Quat::new(1.0, 2.0, 3.0, 4.0);
+        let b: f32 = a.mag();
+        assert_eq!(b, 30.0f32.sqrt());
     }
 }

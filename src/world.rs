@@ -4,9 +4,27 @@ use serde::Deserialize;
 
 #[derive(Default, Deserialize)]
 pub struct World {
-    pub spheres: Vec<(Vec3, f32, Color)>,
-    pub tris: Vec<(Vec3, Vec3, Vec3, Color)>,
+    pub objects: Vec<Object>,
     pub light: Vec3,
+}
+
+#[derive(Deserialize)]
+pub enum Object {
+    /// Triangle Object (Point 1, Point 2, Point 3, Color)
+    Triangle(Vec3, Vec3, Vec3, Color),
+    /// Sphere object (Location, Radius, Color)
+    Sphere(Vec3, f32, Color),
+}
+
+impl Object {
+    /// Fetch color of object
+    #[allow(dead_code)]
+    pub fn get_color(&self) -> Color {
+        match self {
+            Self::Triangle(_, _, _, c) => *c,
+            Self::Sphere(_, _, c) => *c,
+        }
+    }
 }
 
 pub struct Transform {

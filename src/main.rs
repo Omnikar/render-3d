@@ -1,5 +1,7 @@
 // Requires nightly, allows for constant implementations of traits, for Self::Default for storage and small perf improvements.
 #![feature(const_trait_impl)]
+#![feature(const_fn_floating_point_arithmetic)]
+#![feature(core_intrinsics)]
 
 mod camera;
 mod math;
@@ -9,7 +11,7 @@ use camera::Camera;
 use math::{Quat, Vec3};
 use world::{Transform, World};
 
-use pixels::{Pixels, SurfaceTexture};
+use pixels::{PixelsBuilder, SurfaceTexture};
 use rayon::prelude::*;
 use std::{
     collections::VecDeque,
@@ -28,15 +30,15 @@ const DIMS: (u32, u32) = (400, 400);
 const HALF_DIMS: (f32, f32) = (DIMS.0 as f32 / 2.0, DIMS.1 as f32 / 2.0);
 
 /// Number of frames used to create average
-const N_FRAMES: u32 = 20;
+const N_FRAMES: usize = 20;
 
 fn main() {
     let world = ron::from_str::<World>(include_str!("../scenes/sample.ron"))
         .expect("failed to parse World file");
     let mut camera = Camera {
         transform: Transform {
-            position: -0.8 * Vec3::i(),
-            rotation: Quat::one(),
+            position: -0.8 * Vec3::I,
+            rotation: Quat::ONE,
         },
         px_per_unit: 60.0,
         focal_length: 2.0,
@@ -45,7 +47,7 @@ fn main() {
     let event_loop = EventLoop::new();
     let mut input = WinitInputHelper::new();
     let window = {
-        let size = LogicalSize::new(DIMS.0 as f64, DIMS.1 as f64);
+        let size = LogicalSize::new(DIMS.0, DIMS.1);
         WindowBuilder::new()
             .with_title("Raytracing Test")
             .with_inner_size(size)
@@ -58,34 +60,17 @@ fn main() {
     let mut pixels = {
         let window_size = window.inner_size();
         let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
-        Pixels::new(DIMS.0, DIMS.1, surface_texture).expect("failed to create pixels")
+        PixelsBuilder::new(DIMS.0, DIMS.1, surface_texture)
+            .enable_vsync(true)
+            .build()
+            .expect("failed to create pixels")
     };
-
     // Fill alpha channel to avoid setting it later
-    for pixel in pixels.get_frame_mut().chunks_exact_mut(4) {
-        pixel[3] = 255u8;
-    }
+    pixels.get_frame_mut().fill(0xff);
 
-    let mut frametime_log: VecDeque<Duration> = VecDeque::with_capacity(N_FRAMES as usize);
-    queue_render(
-        pixels.get_frame_mut(),
-        &world,
-        &camera,
-        Some(&mut frametime_log),
-    );
-
-    let mut last_frame = std::time::Instant::now();
+    let mut frametime_log: VecDeque<Duration> = VecDeque::with_capacity(N_FRAMES);
 
     event_loop.run(move |event, _, control_flow| {
-        let mut this_frame = Instant::now();
-        let mut delta_time = this_frame - last_frame;
-        let min_frame_time = Duration::from_millis(10);
-        if delta_time < min_frame_time {
-            std::thread::sleep(min_frame_time - delta_time);
-            delta_time = min_frame_time;
-            this_frame = last_frame + delta_time;
-        }
-        let delta_time = delta_time.as_secs_f32();
         let keyboard_input: bool = input.update(&event) && {
             if (input.key_held(VirtualKeyCode::LControl)
                 || input.key_held(VirtualKeyCode::RControl))
@@ -94,54 +79,54 @@ fn main() {
                 *control_flow = ControlFlow::Exit;
             }
 
-            const MOVE_SPEED: f32 = 3.0;
-            const TURN_SPEED: f32 = std::f32::consts::FRAC_PI_2;
+            const DELTA: f32 = 0.015;
+            const MOVE_SPEED: f32 = 3.0 * DELTA;
+            const TURN_SPEED: f32 = std::f32::consts::FRAC_PI_2 * DELTA;
             let mut did_movement: bool = false;
 
             let mut movement = |delta: Vec3| {
-                camera.transform.position += delta.rotate(camera.transform.rotation) * delta_time;
+                camera.transform.position += delta.rotate(camera.transform.rotation);
                 did_movement = true;
             };
 
             if input.key_held(VirtualKeyCode::W) {
-                movement(MOVE_SPEED * Vec3::i());
+                movement(MOVE_SPEED * Vec3::I);
             }
             if input.key_held(VirtualKeyCode::S) {
-                movement(-MOVE_SPEED * Vec3::i());
+                movement(-MOVE_SPEED * Vec3::I);
             }
             if input.key_held(VirtualKeyCode::A) {
-                movement(MOVE_SPEED * Vec3::j());
+                movement(MOVE_SPEED * Vec3::J);
             }
             if input.key_held(VirtualKeyCode::D) {
-                movement(-MOVE_SPEED * Vec3::j());
+                movement(-MOVE_SPEED * Vec3::J);
             }
             if input.key_held(VirtualKeyCode::E) {
-                movement(MOVE_SPEED * Vec3::k());
+                movement(MOVE_SPEED * Vec3::K);
             }
             if input.key_held(VirtualKeyCode::Q) {
-                movement(-MOVE_SPEED * Vec3::k());
+                movement(-MOVE_SPEED * Vec3::K);
             }
             if input.key_held(VirtualKeyCode::X) {
-                movement(MOVE_SPEED * Vec3::i());
-                camera.focal_length -= MOVE_SPEED * delta_time;
+                movement(MOVE_SPEED * Vec3::I);
+                camera.focal_length -= MOVE_SPEED;
             }
             if input.key_held(VirtualKeyCode::Z) {
-                movement(-MOVE_SPEED * Vec3::i());
-                camera.focal_length += MOVE_SPEED * delta_time;
+                movement(-MOVE_SPEED * Vec3::I);
+                camera.focal_length += MOVE_SPEED;
             }
             if input.key_held(VirtualKeyCode::R) {
-                camera.focal_length += MOVE_SPEED * delta_time;
+                camera.focal_length += MOVE_SPEED;
                 did_movement = true;
             }
             if input.key_held(VirtualKeyCode::F) {
-                camera.focal_length -= MOVE_SPEED * delta_time;
+                camera.focal_length -= MOVE_SPEED;
                 did_movement = true;
             }
 
             let mut did_rotation: bool = false;
 
             let mut rotation = |angle: f32, axis: Vec3| {
-                let angle = angle * delta_time;
                 let new_rot = Quat::rotation(axis, angle);
 
                 let rot = &mut camera.transform.rotation;
@@ -155,22 +140,22 @@ fn main() {
             };
 
             if input.key_held(VirtualKeyCode::J) {
-                rotation(TURN_SPEED, Vec3::k());
+                rotation(TURN_SPEED, Vec3::K);
             }
             if input.key_held(VirtualKeyCode::L) {
-                rotation(-TURN_SPEED, Vec3::k());
+                rotation(-TURN_SPEED, Vec3::K);
             }
             if input.key_held(VirtualKeyCode::K) {
-                rotation(TURN_SPEED, Vec3::j());
+                rotation(TURN_SPEED, Vec3::J);
             }
             if input.key_held(VirtualKeyCode::I) {
-                rotation(-TURN_SPEED, Vec3::j());
+                rotation(-TURN_SPEED, Vec3::J);
             }
             if input.key_held(VirtualKeyCode::O) {
-                rotation(TURN_SPEED, Vec3::i());
+                rotation(TURN_SPEED, Vec3::I);
             }
             if input.key_held(VirtualKeyCode::U) {
-                rotation(-TURN_SPEED, Vec3::i())
+                rotation(-TURN_SPEED, Vec3::I)
             }
 
             did_rotation || did_movement
@@ -180,7 +165,7 @@ fn main() {
 
         // Draw the current frame
         if keyboard_input || redraw_requested {
-            queue_render(
+            do_render(
                 pixels.get_frame_mut(),
                 &world,
                 &camera,
@@ -194,11 +179,10 @@ fn main() {
                 *control_flow = ControlFlow::Exit;
             }
         }
-        last_frame = this_frame;
     });
 }
 
-fn queue_render(
+fn do_render(
     frame: &mut [u8],
     world: &World,
     camera: &Camera,
@@ -214,19 +198,24 @@ fn queue_render(
         .par_chunks_exact_mut(4)
         .zip(INDEX)
         .for_each(|(pixel, i)| {
+            // SAFETY: Pixel size will always be 4, RGBA
+            unsafe {
+                std::intrinsics::assume(pixel.len() == 4);
+            }
+
             // (x, y) of pixel on screen
-            let (x, y): (i32, i32) = (((i % DIMS.0) as i32), ((i / DIMS.0) as i32));
+            let (x, y): (u32, u32) = (i % DIMS.0, i / DIMS.0);
 
             let x_w = x as f32 - HALF_DIMS.0;
             let y_w = y as f32 - HALF_DIMS.1;
-            let rgb: &[u8] = &camera.get_px(world, x_w, y_w).0;
-            (pixel[0], pixel[1], pixel[2]) = (rgb[0], rgb[1], rgb[2])
+            pixel[0..=2].copy_from_slice(&camera.get_px(world, x_w, y_w).0)
         });
 
     let took = now.elapsed();
 
     if let Some(frametime_log) = frame_data {
-        if frametime_log.len() == N_FRAMES as usize {
+        // Only remove the last element if the queue is the desired size
+        if frametime_log.len() == N_FRAMES {
             frametime_log.pop_back();
         }
         frametime_log.push_front(took);

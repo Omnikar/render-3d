@@ -1,6 +1,6 @@
 use crate::{
     math::Vec3,
-    world::{Color, Transform, World},
+    world::{Color, Object, Transform, World},
 };
 
 pub struct Camera {
@@ -11,25 +11,29 @@ pub struct Camera {
 
 impl Camera {
     pub fn get_px(&self, world: &World, x: f32, y: f32) -> Color {
-        let ray = Vec3 {
-            x: self.focal_length,
-            y: -x / self.px_per_unit,
-            z: -y / self.px_per_unit,
-        }
+        let ray = Vec3::new(
+            self.focal_length,
+            -x / self.px_per_unit,
+            -y / self.px_per_unit,
+        )
         .rotate(self.transform.rotation);
 
-        let tris = world
-            .tris
+        world
+            .objects
             .iter()
-            .filter_map(|p| self.tri_raycast(ray, world.light, *p));
-        let spheres = world
-            .spheres
-            .iter()
-            .filter_map(|p| self.sphere_raycast(ray, world.light, *p));
-        tris.chain(spheres)
+            .filter_map(|obj| self.raycast(ray, world.light, obj))
             .min_by(|(_, a), (_, b)| a.total_cmp(b))
             .map(|(color, _)| color)
             .unwrap_or(Color([0; 3]))
+    }
+
+    fn raycast(&self, ray: Vec3, light: Vec3, obj: &Object) -> Option<(Color, f32)> {
+        match *obj {
+            Object::Sphere(center, r, color) => self.sphere_raycast(ray, light, (center, r, color)),
+            Object::Triangle(p1, p2, p3, color) => {
+                self.tri_raycast(ray, light, (p1, p2, p3, color))
+            }
+        }
     }
 
     fn tri_raycast(
@@ -38,11 +42,10 @@ impl Camera {
         light: Vec3,
         (p1, p2, p3, color): (Vec3, Vec3, Vec3, Color),
     ) -> Option<(Color, f32)> {
-        let pos = self.transform.position;
         // Check if within plane
         let v1 = p2 - p1;
         let v2 = p3 - p1;
-        let dist = pos - p1;
+        let dist = self.transform.position - p1;
         let cross = v1.cross(v2);
         let t = -cross.dot(dist) / cross.dot(ray);
 
@@ -51,8 +54,9 @@ impl Camera {
         }
 
         // Check if within tetrahedron
-        let [(a, d, g), (b, e, h), (c, f, i)] =
-            [p1, p2, p3].map(|p| p - pos).map(|v| (v.x, v.y, v.z));
+        let [(a, d, g), (b, e, h), (c, f, i)] = [p1, p2, p3]
+            .map(|p| p - self.transform.position)
+            .map(|v| (v.x, v.y, v.z));
 
         let ei_fh = e * i - f * h;
         let fg_di = f * g - d * i;
@@ -86,18 +90,28 @@ impl Camera {
     ) -> Option<(Color, f32)> {
         let dist = center - self.transform.position;
         let a = ray.sq_mag();
+        // SAFETY: `a` will always be positive; we let LLVM know so this can be optimized.
+        unsafe {
+            std::intrinsics::assume(a >= 0.0);
+        }
+
         let b = ray.dot(dist);
         let c = dist.sq_mag() - r.powi(2);
 
-        let sqrt_term = (b.powi(2) - a * c).sqrt();
-        if !sqrt_term.is_finite() {
+        let discriminant = b.powi(2) - a * c;
+        if discriminant.is_sign_negative() || discriminant.is_subnormal() {
             return None;
         }
 
-        let t = [(b + sqrt_term) / a, (b - sqrt_term) / a]
+        let sqrt_term = discriminant.sqrt();
+
+        let t = [b + sqrt_term, b - sqrt_term]
             .into_iter()
             .filter(|n| n.is_sign_positive())
-            .min_by(f32::total_cmp)?;
+            .min_by(f32::total_cmp)
+            // `a` will never be negative as it is the result of the `sq_mag` of a `Vec3`.
+            // As such, dividing by `a` does not have a chance of flipping the signs of the rest of the `t` calculation.
+            .map(|n| n / a)?;
 
         let coord = self.transform.position + ray * t;
         let normal = (coord - center).normalize();
