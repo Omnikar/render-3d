@@ -105,7 +105,7 @@ impl Camera {
 
         let sqrt_term = discriminant.sqrt();
 
-        let t = [(b + sqrt_term), (b - sqrt_term)]
+        let t = [b + sqrt_term, b - sqrt_term]
             .into_iter()
             .filter(|n| n.is_sign_positive())
             .min_by(f32::total_cmp)
