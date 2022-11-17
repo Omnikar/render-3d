@@ -56,16 +56,16 @@ impl Camera {
         // Check if within tetrahedron
         let [(a, d, g), (b, e, h), (c, f, i)] = [p1, p2, p3]
             .map(|p| p - self.transform.position)
-            .map(|v| (v.x(), v.y(), v.z()));
+            .map(|v| (v.x, v.y, v.z));
 
         let ei_fh = e * i - f * h;
         let fg_di = f * g - d * i;
         let dh_eg = d * h - e * g;
         let det_neg = (a * (ei_fh) + b * (fg_di) + c * (dh_eg)).is_sign_negative();
         if ![
-            ray.x() * ei_fh + ray.y() * (c * h - b * i) + ray.z() * (b * f - c * e),
-            ray.x() * fg_di + ray.y() * (a * i - c * g) + ray.z() * (c * d - a * f),
-            ray.x() * dh_eg + ray.y() * (b * g - a * h) + ray.z() * (a * e - b * d),
+            ray.x * ei_fh + ray.y * (c * h - b * i) + ray.z * (b * f - c * e),
+            ray.x * fg_di + ray.y * (a * i - c * g) + ray.z * (c * d - a * f),
+            ray.x * dh_eg + ray.y * (b * g - a * h) + ray.z * (a * e - b * d),
         ]
         .iter()
         .all(|n| n.is_sign_positive() ^ det_neg)
