@@ -26,7 +26,7 @@ use winit::{
 use winit_input_helper::WinitInputHelper;
 
 /// Dimentions of the Window (in pixels), width by height
-const DIMS: (u32, u32) = (400, 400);
+const DIMS: (u32, u32) = (600, 375);
 const HALF_DIMS: (f32, f32) = (DIMS.0 as f32 / 2.0, DIMS.1 as f32 / 2.0);
 
 /// Number of frames used to create average
@@ -40,7 +40,7 @@ fn main() {
             position: -0.8 * Vec3::I,
             rotation: Quat::ONE,
         },
-        px_per_unit: 60.0,
+        px_per_unit: 160.0,
         focal_length: 2.0,
     };
 
