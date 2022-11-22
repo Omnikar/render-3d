@@ -19,35 +19,36 @@ impl Camera {
         .rotate(self.transform.rotation);
 
         Self::raycast(self.transform.position, ray, world, true)
-            .map_or(Color::BLACK, |(color, _, _)| color)
+            .map_or(Color::BLACK, |hit| hit.color)
     }
 
-    fn raycast(base: Vec3, ray: Vec3, world: &World, shadows: bool) -> Option<(Color, f32, Vec3)> {
-        let (mut color, t, normal) = world
+    fn raycast(base: Vec3, ray: Vec3, world: &World, shadows: bool) -> Option<RcHit> {
+        let mut hit = world
             .objects
             .iter()
             .filter_map(|obj| Self::calc_raycast(base, ray, obj))
-            .min_by(|(_, a, _), (_, b, _)| a.total_cmp(b))?;
+            .min_by(|a, b| a.t.total_cmp(&b.t))?;
+        let color = &mut hit.color;
 
-        let coord = base + ray * t;
+        let coord = base + ray * hit.t;
         let light_vec = (world.light - coord).normalize();
         if shadows
             && world.objects.iter().any(|obj| {
                 // Check that the raycast hit is not the suface itself.
                 // `f32::EPSILON` is too small and creates visual artifacts.
-                Self::calc_raycast(coord, light_vec, obj).is_some_and(|(_, t, _)| t > 1e-4)
+                Self::calc_raycast(coord, light_vec, obj).is_some_and(|hit| hit.t > 1e-4)
             })
         {
-            color = Color::BLACK
+            *color = Color::BLACK
         } else {
-            let illumination = light_vec.dot(normal).max(0.0);
-            color = color * illumination;
+            let illumination = light_vec.dot(hit.normal).max(0.0);
+            *color = *color * illumination;
         }
 
-        Some((color, t, normal))
+        Some(hit)
     }
 
-    fn calc_raycast(base: Vec3, ray: Vec3, obj: &Object) -> Option<(Color, f32, Vec3)> {
+    fn calc_raycast(base: Vec3, ray: Vec3, obj: &Object) -> Option<RcHit> {
         match *obj {
             Object::Sphere(center, r, color) => {
                 Self::calc_sphere_raycast(base, ray, (center, r, color))
@@ -62,7 +63,7 @@ impl Camera {
         base: Vec3,
         ray: Vec3,
         (p1, p2, p3, color): (Vec3, Vec3, Vec3, Color),
-    ) -> Option<(Color, f32, Vec3)> {
+    ) -> Option<RcHit> {
         // Check if within plane
         let v1 = p2 - p1;
         let v2 = p3 - p1;
@@ -95,14 +96,14 @@ impl Camera {
 
         let normal = cross.normalize();
 
-        Some((color, t, normal))
+        Some(RcHit::new(color, t, normal))
     }
 
     fn calc_sphere_raycast(
         base: Vec3,
         ray: Vec3,
         (center, r, color): (Vec3, f32, Color),
-    ) -> Option<(Color, f32, Vec3)> {
+    ) -> Option<RcHit> {
         let dist = center - base;
         let a = ray.sq_mag();
         // SAFETY: `a` will always be positive; we let LLVM know so this can be optimized.
@@ -131,6 +132,18 @@ impl Camera {
         let coord = base + ray * t;
         let normal = (coord - center).normalize();
 
-        Some((color, t, normal))
+        Some(RcHit::new(color, t, normal))
+    }
+}
+
+struct RcHit {
+    color: Color,
+    t: f32,
+    normal: Vec3,
+}
+
+impl RcHit {
+    fn new(color: Color, t: f32, normal: Vec3) -> Self {
+        Self { color, t, normal }
     }
 }
