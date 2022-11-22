@@ -12,8 +12,8 @@ pub struct Camera {
 impl Camera {
     pub fn get_px(&self, world: &World, x: f32, y: f32) -> Color {
         let ray = Vec3::new(
+            x / self.px_per_unit,
             self.focal_length,
-            -x / self.px_per_unit,
             -y / self.px_per_unit,
         )
         .rotate(self.transform.rotation);
