@@ -2,6 +2,7 @@
 #![feature(const_trait_impl)]
 #![feature(const_fn_floating_point_arithmetic)]
 #![feature(core_intrinsics)]
+#![feature(is_some_and)]
 
 mod camera;
 mod math;
@@ -33,7 +34,7 @@ const HALF_DIMS: (f32, f32) = (DIMS.0 as f32 / 2.0, DIMS.1 as f32 / 2.0);
 const N_FRAMES: usize = 20;
 
 fn main() {
-    let world = ron::from_str::<World>(include_str!("../scenes/sample.ron"))
+    let world = ron::from_str::<World>(include_str!("../scenes/cube.ron"))
         .expect("failed to parse World file");
     let mut camera = Camera {
         transform: Transform {

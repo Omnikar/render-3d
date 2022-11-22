@@ -18,34 +18,55 @@ impl Camera {
         )
         .rotate(self.transform.rotation);
 
-        world
-            .objects
-            .iter()
-            .filter_map(|obj| self.raycast(ray, world.light, obj))
-            .min_by(|(_, a), (_, b)| a.total_cmp(b))
-            .map(|(color, _)| color)
-            .unwrap_or(Color([0; 3]))
+        Self::raycast(self.transform.position, ray, world, true)
+            .map_or(Color::BLACK, |(color, _, _)| color)
     }
 
-    fn raycast(&self, ray: Vec3, light: Vec3, obj: &Object) -> Option<(Color, f32)> {
+    fn raycast(base: Vec3, ray: Vec3, world: &World, shadows: bool) -> Option<(Color, f32, Vec3)> {
+        let (mut color, t, normal) = world
+            .objects
+            .iter()
+            .filter_map(|obj| Self::calc_raycast(base, ray, obj))
+            .min_by(|(_, a, _), (_, b, _)| a.total_cmp(b))?;
+
+        let coord = base + ray * t;
+        let light_vec = (world.light - coord).normalize();
+        if shadows
+            && world.objects.iter().any(|obj| {
+                // Check that the raycast hit is not the suface itself.
+                // `f32::EPSILON` is too small and creates visual artifacts.
+                Self::calc_raycast(coord, light_vec, obj).is_some_and(|(_, t, _)| t > 1e-4)
+            })
+        {
+            color = Color::BLACK
+        } else {
+            let illumination = light_vec.dot(normal).max(0.0);
+            color = color * illumination;
+        }
+
+        Some((color, t, normal))
+    }
+
+    fn calc_raycast(base: Vec3, ray: Vec3, obj: &Object) -> Option<(Color, f32, Vec3)> {
         match *obj {
-            Object::Sphere(center, r, color) => self.sphere_raycast(ray, light, (center, r, color)),
+            Object::Sphere(center, r, color) => {
+                Self::calc_sphere_raycast(base, ray, (center, r, color))
+            }
             Object::Triangle(p1, p2, p3, color) => {
-                self.tri_raycast(ray, light, (p1, p2, p3, color))
+                Self::calc_tri_raycast(base, ray, (p1, p2, p3, color))
             }
         }
     }
 
-    fn tri_raycast(
-        &self,
+    fn calc_tri_raycast(
+        base: Vec3,
         ray: Vec3,
-        light: Vec3,
         (p1, p2, p3, color): (Vec3, Vec3, Vec3, Color),
-    ) -> Option<(Color, f32)> {
+    ) -> Option<(Color, f32, Vec3)> {
         // Check if within plane
         let v1 = p2 - p1;
         let v2 = p3 - p1;
-        let dist = self.transform.position - p1;
+        let dist = base - p1;
         let cross = v1.cross(v2);
         let t = -cross.dot(dist) / cross.dot(ray);
 
@@ -54,9 +75,8 @@ impl Camera {
         }
 
         // Check if within tetrahedron
-        let [(a, d, g), (b, e, h), (c, f, i)] = [p1, p2, p3]
-            .map(|p| p - self.transform.position)
-            .map(|v| (v.x, v.y, v.z));
+        let [(a, d, g), (b, e, h), (c, f, i)] =
+            [p1, p2, p3].map(|p| p - base).map(|v| (v.x, v.y, v.z));
 
         let ei_fh = e * i - f * h;
         let fg_di = f * g - d * i;
@@ -73,22 +93,17 @@ impl Camera {
             return None;
         }
 
-        let coord = self.transform.position + ray * t;
-        let normal = v1.cross(v2).normalize();
-        let light_vec = (light - coord).normalize();
-        let illumination = light_vec.dot(normal).max(0.0);
-        let color = color * illumination;
+        let normal = cross.normalize();
 
-        Some((color, t))
+        Some((color, t, normal))
     }
 
-    fn sphere_raycast(
-        &self,
+    fn calc_sphere_raycast(
+        base: Vec3,
         ray: Vec3,
-        light: Vec3,
         (center, r, color): (Vec3, f32, Color),
-    ) -> Option<(Color, f32)> {
-        let dist = center - self.transform.position;
+    ) -> Option<(Color, f32, Vec3)> {
+        let dist = center - base;
         let a = ray.sq_mag();
         // SAFETY: `a` will always be positive; we let LLVM know so this can be optimized.
         unsafe {
@@ -113,11 +128,9 @@ impl Camera {
             // As such, dividing by `a` does not have a chance of flipping the signs of the rest of the `t` calculation.
             .map(|n| n / a)?;
 
-        let coord = self.transform.position + ray * t;
+        let coord = base + ray * t;
         let normal = (coord - center).normalize();
-        let light_vec = (light - coord).normalize();
-        let illumination = light_vec.dot(normal).max(0.0);
-        let color = color * illumination;
-        Some((color, t))
+
+        Some((color, t, normal))
     }
 }
