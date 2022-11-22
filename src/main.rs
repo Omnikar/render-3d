@@ -90,24 +90,18 @@ fn main() {
                 did_movement = true;
             };
 
-            if input.key_held(VirtualKeyCode::W) {
-                movement(MOVE_SPEED * Vec3::J);
-            }
-            if input.key_held(VirtualKeyCode::S) {
-                movement(-MOVE_SPEED * Vec3::J);
-            }
-            if input.key_held(VirtualKeyCode::A) {
-                movement(-MOVE_SPEED * Vec3::I);
-            }
-            if input.key_held(VirtualKeyCode::D) {
-                movement(MOVE_SPEED * Vec3::I);
-            }
-            if input.key_held(VirtualKeyCode::E) {
-                movement(MOVE_SPEED * Vec3::K);
-            }
-            if input.key_held(VirtualKeyCode::Q) {
-                movement(-MOVE_SPEED * Vec3::K);
-            }
+            [
+                (VirtualKeyCode::W, Vec3::J),
+                (VirtualKeyCode::S, -Vec3::J),
+                (VirtualKeyCode::D, Vec3::I),
+                (VirtualKeyCode::A, -Vec3::I),
+                (VirtualKeyCode::E, Vec3::K),
+                (VirtualKeyCode::Q, -Vec3::K),
+            ]
+            .into_iter()
+            .filter_map(|(key, axis)| input.key_held(key).then_some(axis))
+            .for_each(|axis| movement(MOVE_SPEED * axis));
+
             if input.key_held(VirtualKeyCode::X) {
                 movement(MOVE_SPEED * Vec3::J);
                 camera.focal_length -= MOVE_SPEED;
@@ -128,36 +122,30 @@ fn main() {
             let mut did_rotation: bool = false;
 
             let mut rotation = |angle: f32, axis: Vec3| {
-                let new_rot = Quat::rotation(axis, angle);
-
                 let rot = &mut camera.transform.rotation;
-                let new_rot = *rot * new_rot * rot.conj();
+                let mut new_rot = Quat::rotation(axis.rotate(*rot), angle);
 
                 // Mathematically, the magnitude should always remain at 1 already, but floating point
-                // precision errors cause self-fueleing inaccuracy that becomes worse with each rotation.
-                let new_rot = new_rot * new_rot.mag().recip();
+                // precision errors may cause self-fueleing inaccuracy that becomes worse with each rotation.
+                if (new_rot.sq_mag() - 1.0).abs() > f32::EPSILON {
+                    new_rot = new_rot * new_rot.mag().recip();
+                }
+
                 *rot = new_rot * *rot;
                 did_rotation = true;
             };
 
-            if input.key_held(VirtualKeyCode::J) {
-                rotation(TURN_SPEED, Vec3::K);
-            }
-            if input.key_held(VirtualKeyCode::L) {
-                rotation(-TURN_SPEED, Vec3::K);
-            }
-            if input.key_held(VirtualKeyCode::K) {
-                rotation(-TURN_SPEED, Vec3::I);
-            }
-            if input.key_held(VirtualKeyCode::I) {
-                rotation(TURN_SPEED, Vec3::I);
-            }
-            if input.key_held(VirtualKeyCode::O) {
-                rotation(TURN_SPEED, Vec3::J);
-            }
-            if input.key_held(VirtualKeyCode::U) {
-                rotation(-TURN_SPEED, Vec3::J)
-            }
+            [
+                (VirtualKeyCode::J, Vec3::K),
+                (VirtualKeyCode::L, -Vec3::K),
+                (VirtualKeyCode::I, Vec3::I),
+                (VirtualKeyCode::K, -Vec3::I),
+                (VirtualKeyCode::O, Vec3::J),
+                (VirtualKeyCode::U, -Vec3::J),
+            ]
+            .into_iter()
+            .filter_map(|(key, axis)| input.key_held(key).then_some(axis))
+            .for_each(|axis| rotation(TURN_SPEED, axis));
 
             did_rotation || did_movement
         };
