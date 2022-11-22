@@ -61,7 +61,7 @@ impl Camera {
         let ei_fh = e * i - f * h;
         let fg_di = f * g - d * i;
         let dh_eg = d * h - e * g;
-        let det_neg = (a * (ei_fh) + b * (fg_di) + c * (dh_eg)).is_sign_negative();
+        let det_neg = (a * ei_fh + b * fg_di + c * dh_eg).is_sign_negative();
         if ![
             ray.x * ei_fh + ray.y * (c * h - b * i) + ray.z * (b * f - c * e),
             ray.x * fg_di + ray.y * (a * i - c * g) + ray.z * (c * d - a * f),
