@@ -32,13 +32,15 @@ impl Camera {
 
         let coord = base + ray * hit.t;
         let light_vec = (world.light - coord).normalize();
-        if shadows
-            && world.objects.iter().any(|obj| {
+        if shadows && {
+            let max_t_sq = (world.light - coord).sq_mag();
+            world.objects.iter().any(|obj| {
                 // Check that the raycast hit is not the suface itself.
                 // `f32::EPSILON` is too small and creates visual artifacts.
-                Self::calc_raycast(coord, light_vec, obj).is_some_and(|hit| hit.t > 1e-4)
+                Self::calc_raycast(coord, light_vec, obj)
+                    .is_some_and(|hit| hit.t > 1e-4 && hit.t * hit.t < max_t_sq)
             })
-        {
+        } {
             *color = Color::BLACK
         } else {
             let illumination = light_vec.dot(hit.normal).max(0.0);
