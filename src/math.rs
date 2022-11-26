@@ -15,7 +15,7 @@ impl const Default for Vec3 {
 
 impl const std::ops::Add for Vec3 {
     type Output = Vec3;
-    #[inline(always)]
+    #[inline]
     fn add(self, rhs: Vec3) -> Vec3 {
         Vec3::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
     }
@@ -23,7 +23,7 @@ impl const std::ops::Add for Vec3 {
 
 impl const std::ops::Add<f32> for Vec3 {
     type Output = Quat;
-    #[inline(always)]
+    #[inline]
     fn add(self, rhs: f32) -> Quat {
         Quat::from(self) + rhs
     }
@@ -31,14 +31,14 @@ impl const std::ops::Add<f32> for Vec3 {
 
 impl const std::ops::Add<Vec3> for f32 {
     type Output = Quat;
-    #[inline(always)]
+    #[inline]
     fn add(self, rhs: Vec3) -> Quat {
         rhs + self
     }
 }
 
 impl std::ops::AddAssign for Vec3 {
-    #[inline(always)]
+    #[inline]
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
     }
@@ -46,7 +46,7 @@ impl std::ops::AddAssign for Vec3 {
 
 impl const std::ops::Sub for Vec3 {
     type Output = Vec3;
-    #[inline(always)]
+    #[inline]
     fn sub(self, rhs: Vec3) -> Vec3 {
         Vec3::new(self.x - rhs.x, self.y - rhs.y, self.z - rhs.z)
     }
@@ -54,7 +54,7 @@ impl const std::ops::Sub for Vec3 {
 
 impl const std::ops::Neg for Vec3 {
     type Output = Vec3;
-    #[inline(always)]
+    #[inline]
     fn neg(self) -> Vec3 {
         Vec3::new(-self.x, -self.y, -self.z)
     }
@@ -62,7 +62,7 @@ impl const std::ops::Neg for Vec3 {
 
 impl const std::ops::Mul<Vec3> for f32 {
     type Output = Vec3;
-    #[inline(always)]
+    #[inline]
     fn mul(self, rhs: Vec3) -> Vec3 {
         Vec3::new(self * rhs.x, self * rhs.y, self * rhs.z)
     }
@@ -70,7 +70,7 @@ impl const std::ops::Mul<Vec3> for f32 {
 
 impl const std::ops::Mul<f32> for Vec3 {
     type Output = Vec3;
-    #[inline(always)]
+    #[inline]
     fn mul(self, rhs: f32) -> Vec3 {
         rhs * self
     }
@@ -78,7 +78,7 @@ impl const std::ops::Mul<f32> for Vec3 {
 
 impl const std::ops::Mul<Quat> for Vec3 {
     type Output = Quat;
-    #[inline(always)]
+    #[inline]
     fn mul(self, rhs: Quat) -> Quat {
         Quat::from(self) * rhs
     }
@@ -86,14 +86,14 @@ impl const std::ops::Mul<Quat> for Vec3 {
 
 impl const std::ops::Div<f32> for Vec3 {
     type Output = Vec3;
-    #[inline(always)]
+    #[inline]
     fn div(self, rhs: f32) -> Vec3 {
         Vec3::new(self.x / rhs, self.y / rhs, self.z / rhs)
     }
 }
 
 impl const From<Quat> for Vec3 {
-    #[inline(always)]
+    #[inline]
     fn from(quat: Quat) -> Vec3 {
         Vec3::new(quat.i, quat.j, quat.k)
     }
@@ -159,7 +159,7 @@ impl const Default for Quat {
 
 impl const std::ops::Add for Quat {
     type Output = Quat;
-    #[inline(always)]
+    #[inline]
     fn add(self, rhs: Quat) -> Quat {
         Quat::new(
             self.r + rhs.r,
@@ -172,7 +172,7 @@ impl const std::ops::Add for Quat {
 
 impl const std::ops::Add<f32> for Quat {
     type Output = Quat;
-    #[inline(always)]
+    #[inline]
     fn add(self, rhs: f32) -> Quat {
         self + Quat::from(rhs)
     }
@@ -180,7 +180,7 @@ impl const std::ops::Add<f32> for Quat {
 
 impl const std::ops::Add<Quat> for f32 {
     type Output = Quat;
-    #[inline(always)]
+    #[inline]
     fn add(self, rhs: Quat) -> Quat {
         rhs + self
     }
@@ -188,7 +188,7 @@ impl const std::ops::Add<Quat> for f32 {
 
 impl const std::ops::Sub for Quat {
     type Output = Quat;
-    #[inline(always)]
+    #[inline]
     fn sub(self, rhs: Quat) -> Quat {
         Quat::new(
             self.r - rhs.r,
@@ -201,7 +201,7 @@ impl const std::ops::Sub for Quat {
 
 impl const std::ops::Neg for Quat {
     type Output = Quat;
-    #[inline(always)]
+    #[inline]
     fn neg(self) -> Quat {
         Quat::new(-self.r, -self.i, -self.j, -self.k)
     }
@@ -209,7 +209,7 @@ impl const std::ops::Neg for Quat {
 
 impl const std::ops::Mul for Quat {
     type Output = Quat;
-    #[inline(always)]
+    #[inline]
     fn mul(self, rhs: Quat) -> Quat {
         Quat::new(
             self.r * rhs.r - self.i * rhs.i - self.j * rhs.j - self.k * rhs.k,
@@ -222,7 +222,7 @@ impl const std::ops::Mul for Quat {
 
 impl const std::ops::Mul<f32> for Quat {
     type Output = Quat;
-    #[inline(always)]
+    #[inline]
     fn mul(self, rhs: f32) -> Quat {
         Quat::new(self.r * rhs, self.i * rhs, self.j * rhs, self.k * rhs)
     }
@@ -230,14 +230,14 @@ impl const std::ops::Mul<f32> for Quat {
 
 impl const std::ops::Mul<Vec3> for Quat {
     type Output = Quat;
-    #[inline(always)]
+    #[inline]
     fn mul(self, rhs: Vec3) -> Quat {
         self * Quat::from(rhs)
     }
 }
 
 impl std::ops::MulAssign<f32> for Quat {
-    #[inline(always)]
+    #[inline]
     fn mul_assign(&mut self, rhs: f32) {
         *self = *self * rhs;
     }
@@ -245,21 +245,21 @@ impl std::ops::MulAssign<f32> for Quat {
 
 impl const std::ops::Mul<Quat> for f32 {
     type Output = Quat;
-    #[inline(always)]
+    #[inline]
     fn mul(self, rhs: Quat) -> Quat {
         rhs * self
     }
 }
 
 impl const From<Vec3> for Quat {
-    #[inline(always)]
+    #[inline]
     fn from(vec: Vec3) -> Quat {
         Quat::new(0.0, vec.x, vec.y, vec.z)
     }
 }
 
 impl const From<f32> for Quat {
-    #[inline(always)]
+    #[inline]
     fn from(r: f32) -> Quat {
         Quat::new(r, 0.0, 0.0, 0.0)
     }
@@ -299,9 +299,9 @@ mod vec3_tests {
     #[test]
     fn new() {
         let a = Vec3::new(1.0, 2.0, 3.0);
-        assert_eq!(a.x, 1.0);
-        assert_eq!(a.y, 2.0);
-        assert_eq!(a.z, 3.0);
+        assert!((a.x - 1.0).abs() < f32::EPSILON);
+        assert!((a.y - 2.0).abs() < f32::EPSILON);
+        assert!((a.z - 3.0).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -355,14 +355,14 @@ mod vec3_tests {
     fn sq_mag() {
         let a: Vec3 = Vec3::new(1.0, 2.0, 3.0);
         let b: f32 = a.sq_mag();
-        assert_eq!(b, 14.0);
+        assert!((b - 14.0).abs() < f32::EPSILON);
     }
 
     #[test]
     fn mag() {
         let a: Vec3 = Vec3::new(1.0, 2.0, 3.0);
         let b: f32 = a.mag();
-        assert_eq!(b, 14.0f32.sqrt());
+        assert!((b - 14.0f32.sqrt()).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -381,10 +381,10 @@ mod quat_tests {
     #[test]
     fn new() {
         let a: Quat = Quat::new(1.0, 2.0, 3.0, 4.0);
-        assert_eq!(a.r, 1.0);
-        assert_eq!(a.i, 2.0);
-        assert_eq!(a.j, 3.0);
-        assert_eq!(a.k, 4.0);
+        assert!((a.r - 1.0).abs() < f32::EPSILON);
+        assert!((a.i - 2.0).abs() < f32::EPSILON);
+        assert!((a.j - 3.0).abs() < f32::EPSILON);
+        assert!((a.k - 4.0).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -392,7 +392,7 @@ mod quat_tests {
         let a: Quat = Quat::new(1.0, 1.0, 1.0, 1.0);
         let b: Quat = Quat::new(0.5, 1.0, 0.5, 1.0);
         let c: Quat = a + b;
-        assert_eq!(c, Quat::new(1.5, 2.0, 1.5, 2.0));
+        assert!((c - Quat::new(1.5, 2.0, 1.5, 2.0)).sq_mag() < f32::EPSILON);
     }
 
     #[test]
@@ -400,7 +400,7 @@ mod quat_tests {
         let a: Quat = Quat::new(1.0, 0.5, 1.0, 2.0);
         let b: f32 = 10.0;
         let c: Quat = a + b;
-        assert_eq!(c, Quat::new(11.0, 0.5, 1.0, 2.0));
+        assert!((c - Quat::new(11.0, 0.5, 1.0, 2.0)).sq_mag() < f32::EPSILON);
     }
 
     #[test]
@@ -408,14 +408,14 @@ mod quat_tests {
         let a: Quat = Quat::new(1.0, 1.0, 1.0, 1.0);
         let b: Quat = Quat::new(0.5, 1.0, 0.5, 1.0);
         let c: Quat = a - b;
-        assert_eq!(c, Quat::new(0.5, 0.0, 0.5, 0.0));
+        assert!((c - Quat::new(0.5, 0.0, 0.5, 0.0)).sq_mag() < f32::EPSILON);
     }
 
     #[test]
     fn neg() {
         let a: Quat = Quat::new(1.0, 1.0, 1.0, 1.0);
         let b: Quat = -a;
-        assert_eq!(b, Quat::new(-1.0, -1.0, -1.0, -1.0));
+        assert!((b - Quat::new(-1.0, -1.0, -1.0, -1.0)).sq_mag() < f32::EPSILON);
     }
 
     #[test]
@@ -423,7 +423,7 @@ mod quat_tests {
         let a: Quat = Quat::new(1.0, 1.0, 1.0, 1.0);
         let b: Quat = Quat::new(0.5, 1.0, 0.5, 1.0);
         let c: Quat = a * b;
-        assert_eq!(c, Quat::new(-2.0, 2.0, 1.0, 1.0));
+        assert!((c - Quat::new(-2.0, 2.0, 1.0, 1.0)).sq_mag() < f32::EPSILON);
     }
 
     #[test]
@@ -431,20 +431,20 @@ mod quat_tests {
         let a: Quat = Quat::new(0.5, 1.0, 0.5, 1.0);
         let b: f32 = 2.0;
         let c: Quat = a * b;
-        assert_eq!(c, Quat::new(1.0, 2.0, 1.0, 2.0));
+        assert!((c - Quat::new(1.0, 2.0, 1.0, 2.0)).sq_mag() < f32::EPSILON);
     }
 
     #[test]
     fn sq_mag() {
         let a: Quat = Quat::new(1.0, 2.0, 3.0, 4.0);
         let b: f32 = a.sq_mag();
-        assert_eq!(b, 30.0);
+        assert!((b - 30.0).abs() < f32::EPSILON);
     }
 
     #[test]
     fn mag() {
         let a: Quat = Quat::new(1.0, 2.0, 3.0, 4.0);
         let b: f32 = a.mag();
-        assert_eq!(b, 30.0f32.sqrt());
+        assert!((b - 30.0f32.sqrt()).abs() < f32::EPSILON);
     }
 }
