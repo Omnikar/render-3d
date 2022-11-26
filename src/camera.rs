@@ -114,9 +114,9 @@ impl Camera {
         }
 
         let dot = ray.dot(dist);
-        let d_r_sqmag = dist.sq_mag() - r.powi(2);
+        let d_r_sqmag = dist.sq_mag() - r * r;
 
-        let discriminant = dot.powi(2) - ray_sqmag * d_r_sqmag;
+        let discriminant = dot * dot - ray_sqmag * d_r_sqmag;
         if discriminant.is_sign_negative() || discriminant.is_subnormal() {
             return None;
         }
@@ -146,7 +146,7 @@ struct RcHit {
 }
 
 impl RcHit {
-    fn new(color: Color, t: f32, normal: Vec3) -> Self {
+    const fn new(color: Color, t: f32, normal: Vec3) -> Self {
         Self { color, t, normal }
     }
 }

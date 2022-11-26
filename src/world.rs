@@ -19,7 +19,7 @@ pub enum Object {
 impl Object {
     /// Fetch color of object
     #[allow(dead_code)]
-    pub fn get_color(&self) -> Color {
+    pub const fn get_color(&self) -> Color {
         match self {
             Self::Triangle(_, _, _, c) | Self::Sphere(_, _, c) => *c,
         }
@@ -48,20 +48,20 @@ impl std::ops::IndexMut<usize> for Color {
 }
 
 impl std::ops::Mul<f32> for Color {
-    type Output = Color;
-    fn mul(self, rhs: f32) -> Color {
+    type Output = Self;
+    fn mul(self, rhs: f32) -> Self {
         #[allow(clippy::cast_possible_truncation)]
-        Color(self.0.map(|n| (n as f32 * rhs).round() as u8))
+        Self(self.0.map(|n| (n as f32 * rhs).round() as u8))
     }
 }
 
 impl Color {
-    pub const BLACK: Color = Color([0; 3]);
+    pub const BLACK: Self = Self([0; 3]);
 
     #[allow(dead_code)]
-    fn interpolate(self, rhs: Color, ratio: f32) -> Color {
+    fn interpolate(self, rhs: Self, ratio: f32) -> Self {
         #[allow(clippy::cast_possible_truncation)]
-        Color([0, 1, 2].map(|i| {
+        Self([0, 1, 2].map(|i| {
             (self[i] as f32 * (1.0 - ratio)).round() as u8 + (rhs[i] as f32 * ratio).round() as u8
         }))
     }
