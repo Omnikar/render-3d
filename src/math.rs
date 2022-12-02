@@ -44,6 +44,12 @@ impl std::ops::AddAssign for Vec3 {
     }
 }
 
+impl std::iter::Sum for Vec3 {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::default(), std::ops::Add::add)
+    }
+}
+
 impl const std::ops::Sub for Vec3 {
     type Output = Self;
     #[inline]

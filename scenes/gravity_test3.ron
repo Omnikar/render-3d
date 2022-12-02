@@ -1,0 +1,48 @@
+World(
+    objects: [
+        Sphere(
+            Vec3(
+                x: -1.5,
+                y: 3.0,
+                z: 0.0,
+            ),
+            0.1,
+            Color((40, 161, 191)),
+            Rigidbody(
+                mass: 0.8,
+                velocity: Vec3(x: 0.0, y: 0.0, z: -5.164),
+            ),
+        ),
+        Sphere(
+            Vec3(
+                x: 0.0,
+                y: 3.0,
+                z: 0.0,
+            ),
+            0.2,
+            Color((245, 203, 66)),
+            Rigidbody(
+                mass: 20.0,
+                velocity: Vec3(x: 0.0, y: 0.0, z: 0.0),
+            ),
+        ),
+        Sphere(
+            Vec3(
+                x: 2.0,
+                y: 3.0,
+                z: 0.0,
+            ),
+            0.1,
+            Color((40, 161, 191)),
+            Rigidbody(
+                mass: 0.8,
+                velocity: Vec3(x: 0.0, y: 0.0, z: -4.472),
+            ),
+        ),
+    ],
+    light: Vec3(
+        x: 0.0,
+        y: -10.0,
+        z: 10.0,
+    ),
+)

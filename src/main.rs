@@ -30,7 +30,7 @@ use std::{
 };
 use winit::{
     dpi::LogicalSize,
-    event::{Event, VirtualKeyCode},
+    event::VirtualKeyCode, /*Event,*/
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
@@ -44,7 +44,7 @@ const HALF_DIMS: (f32, f32) = (DIMS.0 as f32 / 2.0, DIMS.1 as f32 / 2.0);
 const N_FRAMES: usize = 20;
 
 fn main() {
-    let world = ron::from_str::<World>(include_str!("../scenes/cube.ron"))
+    let mut world = ron::from_str::<World>(include_str!("../scenes/gravity_test2.ron"))
         .expect("failed to parse World file");
     let mut camera = Camera {
         transform: Transform {
@@ -81,11 +81,49 @@ fn main() {
 
     let mut frametime_log: VecDeque<Duration> = VecDeque::with_capacity(N_FRAMES);
 
-    event_loop.run(move |event, _, control_flow| {
-        let keyboard_input: bool =
-            input.update(&event) && handle_input(&input, control_flow, &mut camera);
+    fn com(objs: &[world::Object]) -> Vec3 {
+        let total_mass = objs
+            .iter()
+            .filter_map(|obj| {
+                if let world::Object::Sphere(.., rb) = obj {
+                    Some(rb.mass)
+                } else {
+                    None
+                }
+            })
+            .sum::<f32>();
+        objs.iter()
+            .filter_map(|obj| {
+                if let world::Object::Sphere(pos, .., rb) = obj {
+                    Some(*pos * rb.mass)
+                } else {
+                    None
+                }
+            })
+            .sum::<Vec3>()
+            / total_mass
+    }
 
-        let redraw_requested: bool = matches!(event, Event::RedrawRequested(_));
+    let mut last_com = com(&world.objects);
+
+    event_loop.run(move |event, _, control_flow| {
+        const DELTA: f32 = 0.015;
+
+        handle_accels(&mut world, DELTA);
+        world.objects.iter_mut().for_each(|obj| {
+            if let world::Object::Sphere(pos, .., rb) = obj {
+                *pos += rb.velocity * DELTA;
+            }
+        });
+        let new_com = com(&world.objects);
+        let delta_com = new_com - last_com;
+        camera.transform.position += delta_com;
+        last_com = new_com;
+
+        let keyboard_input: bool =
+            input.update(&event) && handle_input(&input, control_flow, &mut camera, DELTA);
+
+        let redraw_requested: bool = true; //matches!(event, Event::RedrawRequested(_));
 
         // Draw the current frame
         if keyboard_input || redraw_requested {
@@ -106,19 +144,53 @@ fn main() {
     });
 }
 
+fn handle_accels(world: &mut World, delta_t: f32) {
+    use world::{Object, Rigidbody};
+
+    const G: f32 = 2.0;
+
+    let bodies: Vec<_> = world
+        .objects
+        .iter()
+        .filter_map(|obj| match *obj {
+            Object::Sphere(pos, .., Rigidbody { mass, .. }) => Some((pos, mass)),
+            Object::Triangle(..) => None,
+        })
+        .collect();
+
+    for obj in &mut world.objects {
+        if let Object::Sphere(pos, .., rb) = obj {
+            let total_acc: Vec3 = bodies
+                .par_iter()
+                .filter_map(|bod| {
+                    let sq_dist = (bod.0 - *pos).sq_mag();
+                    if sq_dist < f32::EPSILON {
+                        return None;
+                    }
+                    let mag = G * bod.1 / sq_dist;
+                    let dir = (bod.0 - *pos) / sq_dist.sqrt();
+                    Some(dir * mag)
+                })
+                .sum();
+            let delta_v = total_acc * delta_t;
+            rb.velocity += delta_v;
+        }
+    }
+}
+
 fn handle_input(
     input: &WinitInputHelper,
     control_flow: &mut ControlFlow,
     camera: &mut Camera,
+    delta_t: f32,
 ) -> bool {
     if (input.key_held(VirtualKeyCode::LControl) || input.key_held(VirtualKeyCode::RControl))
         && input.key_pressed(VirtualKeyCode::C)
     {
         *control_flow = ControlFlow::Exit;
     }
-    const DELTA: f32 = 0.015;
-    const MOVE_SPEED: f32 = 3.0 * DELTA;
-    const TURN_SPEED: f32 = std::f32::consts::FRAC_PI_2 * DELTA;
+    let move_delta = 3.0 * delta_t;
+    let turn_delta = std::f32::consts::FRAC_PI_2 * delta_t;
     let mut did_movement: bool = false;
     let mut movement = |delta: Vec3| {
         camera.transform.position += delta.rotate(camera.transform.rotation);
@@ -134,21 +206,21 @@ fn handle_input(
     ]
     .into_iter()
     .filter_map(|(key, axis)| input.key_held(key).then_some(axis))
-    .for_each(|axis| movement(MOVE_SPEED * axis));
+    .for_each(|axis| movement(move_delta * axis));
     if input.key_held(VirtualKeyCode::X) {
-        movement(MOVE_SPEED * Vec3::J);
-        camera.focal_length -= MOVE_SPEED;
+        movement(move_delta * Vec3::J);
+        camera.focal_length -= move_delta;
     }
     if input.key_held(VirtualKeyCode::Z) {
-        movement(-MOVE_SPEED * Vec3::J);
-        camera.focal_length += MOVE_SPEED;
+        movement(-move_delta * Vec3::J);
+        camera.focal_length += move_delta;
     }
     if input.key_held(VirtualKeyCode::R) {
-        camera.focal_length += MOVE_SPEED;
+        camera.focal_length += move_delta;
         did_movement = true;
     }
     if input.key_held(VirtualKeyCode::F) {
-        camera.focal_length -= MOVE_SPEED;
+        camera.focal_length -= move_delta;
         did_movement = true;
     }
     let mut did_rotation: bool = false;
@@ -175,7 +247,7 @@ fn handle_input(
     ]
     .into_iter()
     .filter_map(|(key, axis)| input.key_held(key).then_some(axis))
-    .for_each(|axis| rotation(TURN_SPEED, axis));
+    .for_each(|axis| rotation(turn_delta, axis));
     did_rotation || did_movement
 }
 

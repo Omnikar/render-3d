@@ -52,7 +52,7 @@ impl Camera {
 
     fn calc_raycast(base: Vec3, ray: Vec3, obj: &Object) -> Option<RcHit> {
         match *obj {
-            Object::Sphere(center, r, color) => {
+            Object::Sphere(center, r, color, _) => {
                 Self::calc_sphere_raycast(base, ray, (center, r, color))
             }
             Object::Triangle(p1, p2, p3, color) => {

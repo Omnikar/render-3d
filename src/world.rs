@@ -8,12 +8,12 @@ pub struct World {
     pub light: Vec3,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub enum Object {
     /// Triangle Object (Point 1, Point 2, Point 3, Color)
     Triangle(Vec3, Vec3, Vec3, Color),
-    /// Sphere object (Location, Radius, Color)
-    Sphere(Vec3, f32, Color),
+    /// Sphere object (Location, Radius, Color, Rigidbody)
+    Sphere(Vec3, f32, Color, Rigidbody),
 }
 
 impl Object {
@@ -21,7 +21,7 @@ impl Object {
     #[allow(dead_code)]
     pub const fn get_color(&self) -> Color {
         match self {
-            Self::Triangle(_, _, _, c) | Self::Sphere(_, _, c) => *c,
+            Self::Triangle(.., c) | Self::Sphere(.., c, _) => *c,
         }
     }
 }
@@ -31,7 +31,7 @@ pub struct Transform {
     pub rotation: Quat,
 }
 
-#[derive(Clone, Copy, Deserialize)]
+#[derive(Clone, Copy, Deserialize, Debug)]
 pub struct Color(pub [u8; 3]);
 
 impl std::ops::Index<usize> for Color {
@@ -65,4 +65,10 @@ impl Color {
             (self[i] as f32 * (1.0 - ratio)).round() as u8 + (rhs[i] as f32 * ratio).round() as u8
         }))
     }
+}
+
+#[derive(Clone, Copy, Deserialize, Debug)]
+pub struct Rigidbody {
+    pub mass: f32,
+    pub velocity: Vec3,
 }
