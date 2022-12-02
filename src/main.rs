@@ -118,6 +118,7 @@ fn main() {
         let new_com = com(&world.objects);
         let delta_com = new_com - last_com;
         camera.transform.position += delta_com;
+        world.light += delta_com;
         last_com = new_com;
 
         let keyboard_input: bool =
