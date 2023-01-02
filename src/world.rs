@@ -8,7 +8,7 @@ pub struct World {
     pub light: Vec3,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Copy, Deserialize, Debug)]
 pub enum Object {
     /// Triangle Object (Point 1, Point 2, Point 3, Color)
     Triangle(Vec3, Vec3, Vec3, Color),

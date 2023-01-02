@@ -58,6 +58,13 @@ impl const std::ops::Sub for Vec3 {
     }
 }
 
+impl std::ops::SubAssign for Vec3 {
+    #[inline]
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = *self - rhs;
+    }
+}
+
 impl const std::ops::Neg for Vec3 {
     type Output = Self;
     #[inline]

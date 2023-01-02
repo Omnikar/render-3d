@@ -20,7 +20,7 @@ mod world;
 
 use camera::Camera;
 use math::{Quat, Vec3};
-use world::{Transform, World};
+use world::{Object, Rigidbody, Transform, World};
 
 use pixels::{PixelsBuilder, SurfaceTexture};
 use rayon::prelude::*;
@@ -44,7 +44,7 @@ const HALF_DIMS: (f32, f32) = (DIMS.0 as f32 / 2.0, DIMS.1 as f32 / 2.0);
 const N_FRAMES: usize = 20;
 
 fn main() {
-    let mut world = ron::from_str::<World>(include_str!("../scenes/gravity_test2.ron"))
+    let mut world = ron::from_str::<World>(include_str!("../scenes/gravity_test8.ron"))
         .expect("failed to parse World file");
     let mut camera = Camera {
         transform: Transform {
@@ -81,11 +81,11 @@ fn main() {
 
     let mut frametime_log: VecDeque<Duration> = VecDeque::with_capacity(N_FRAMES);
 
-    fn com(objs: &[world::Object]) -> Vec3 {
+    fn com(objs: &[Object]) -> Vec3 {
         let total_mass = objs
             .iter()
             .filter_map(|obj| {
-                if let world::Object::Sphere(.., rb) = obj {
+                if let Object::Sphere(.., rb) = obj {
                     Some(rb.mass)
                 } else {
                     None
@@ -94,7 +94,7 @@ fn main() {
             .sum::<f32>();
         objs.iter()
             .filter_map(|obj| {
-                if let world::Object::Sphere(pos, .., rb) = obj {
+                if let Object::Sphere(pos, .., rb) = obj {
                     Some(*pos * rb.mass)
                 } else {
                     None
@@ -111,10 +111,11 @@ fn main() {
 
         handle_accels(&mut world, DELTA);
         world.objects.iter_mut().for_each(|obj| {
-            if let world::Object::Sphere(pos, .., rb) = obj {
+            if let Object::Sphere(pos, .., rb) = obj {
                 *pos += rb.velocity * DELTA;
             }
         });
+        handle_collisions(&mut world);
         let new_com = com(&world.objects);
         let delta_com = new_com - last_com;
         camera.transform.position += delta_com;
@@ -146,8 +147,6 @@ fn main() {
 }
 
 fn handle_accels(world: &mut World, delta_t: f32) {
-    use world::{Object, Rigidbody};
-
     const G: f32 = 2.0;
 
     let bodies: Vec<_> = world
@@ -175,6 +174,48 @@ fn handle_accels(world: &mut World, delta_t: f32) {
                 .sum();
             let delta_v = total_acc * delta_t;
             rb.velocity += delta_v;
+        }
+    }
+}
+
+fn handle_collisions(world: &mut World) {
+    let mut iter = 0..world.objects.len();
+    while let Some(i1) = iter.next() {
+        let iter_clone = iter.clone();
+        for i2 in iter_clone {
+            let (obj1, obj2) = {
+                let (l, r) = world.objects.split_at_mut(i2);
+                (&mut l[i1], &mut r[0])
+            };
+
+            let (Object::Sphere(pos1, r1, _, rb1), Object::Sphere(pos2, r2, _, rb2)) = (obj1, obj2) else {
+                continue;
+            };
+
+            let diff_vec = *pos2 - *pos1;
+            let dist = diff_vec.mag();
+            if dist > *r1 + *r2 {
+                continue;
+            }
+
+            if diff_vec.dot(rb2.velocity - rb1.velocity).is_sign_positive() {
+                continue;
+            }
+
+            let (m1, m2) = (rb1.mass, rb2.mass);
+
+            let col_vec = diff_vec / dist;
+            let v1 = rb1.velocity.dot(col_vec);
+            let v2 = rb2.velocity.dot(col_vec);
+
+            let (p1, p2) = (m1 * v1, m2 * v2);
+            let m_tot = m1 + m2;
+
+            let v1f = (p1 + 2.0 * p2 - m2 * v1) / m_tot;
+            let v2f = (p2 + 2.0 * p1 - m1 * v2) / m_tot;
+
+            rb1.velocity += (v1f - v1) * col_vec;
+            rb2.velocity += (v2f - v2) * col_vec;
         }
     }
 }
